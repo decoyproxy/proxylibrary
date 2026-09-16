@@ -6,9 +6,10 @@ Runs as its own process next to the API server. A change does not re-ingest
 immediately: edits arrive in bursts (editors write, rename, touch), so it waits
 for QUIET seconds of no further events and then re-runs the whole pipeline.
 
-The whole pipeline, not just the changed file: UMAP fits the entire corpus, so
-one new document moves every semantic coordinate. Re-embedding a few dozen
-documents is cheap next to the confusion of a half-updated galaxy.
+Only the changed files are re-embedded, and only they move in the galaxy — see
+ingest.build. Because this process is long-lived, the models stay loaded, so a
+save costs a second or two rather than the fifteen a cold run spends loading
+them.
 """
 import time
 

@@ -37,6 +37,7 @@ on disk. No network calls beyond the one-time model download.
 import json
 import os
 import re
+import sys
 from datetime import date as date_cls
 from pathlib import Path
 
@@ -57,6 +58,10 @@ IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 PDF_PAGES = int(os.environ.get("PDF_PAGES", 20))  # enough to characterise a paper
 PDF_CHARS = 20000
 CLIP_MIX = float(os.environ.get("CLIP_MIX", 0.4))  # CLIP's share of the joint space
+# Re-project the whole galaxy once this share of it has changed since the last
+# full layout; below that, changed nodes are placed among their neighbours and
+# everything else stays put.
+REFIT_RATIO = float(os.environ.get("REFIT_RATIO", 0.2))
 CLIP_TEXT_CHARS = 300  # CLIP's text encoder truncates at 77 tokens anyway
 CLIP_MODEL = os.environ.get("CLIP_MODEL", "ViT-B-32")
 CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion2b_s34b_b79k")
@@ -108,6 +113,12 @@ def parse(path):
     return meta, body
 
 
+def fingerprint(path):
+    """Changes whenever the file's bytes could have. Cheap: one stat call."""
+    stat = path.stat()
+    return f"{stat.st_mtime_ns}:{stat.st_size}"
+
+
 def collect():
     """Walk the library into (node dict, text) pairs, ordered for stable ids."""
     found = []
@@ -132,6 +143,7 @@ def collect():
                 "date": meta.get("date", date_cls.fromtimestamp(path.stat().st_mtime).isoformat()),
                 "path": str(path.relative_to(LIBRARY)),
                 "media": media_kind(path),
+                "fingerprint": fingerprint(path),
                 "links": WIKI_LINK.findall(body),
             }
             found.append((node, f"{node['title']}\n\n{body}".strip() or node["title"]))
@@ -175,15 +187,36 @@ def collection():
     )
 
 
-def store_vectors(nodes, texts, vectors):
-    """Persist to embedded ChromaDB so search can query it without re-embedding."""
-    collection().upsert(
-        ids=[n["id"] for n in nodes],
-        embeddings=vectors,
-        documents=texts,
-        metadatas=[{k: n[k] for k in ("title", "type", "domain", "importance", "path")}
-                   for n in nodes],
-    )
+def metadata(node, fingerprints):
+    fields = ("title", "type", "domain", "importance", "path", "media")
+    return {**{k: node[k] for k in fields}, "fingerprint": fingerprints[node["id"]]}
+
+
+def reusable(store, ids, fingerprints):
+    """Vectors from the last ingest whose file has not been touched since.
+
+    The fingerprint rides along in the vector's own metadata, so there is no
+    second cache file to fall out of step with the index.
+    """
+    if not ids:
+        return {}
+    stored = store.get(ids=ids, include=["embeddings", "metadatas"])
+    embeddings = stored["embeddings"]
+    if embeddings is None or not len(embeddings):
+        return {}
+    return {
+        nid: list(vector)
+        for nid, meta, vector in zip(stored["ids"], stored["metadatas"], embeddings)
+        if meta.get("fingerprint") == fingerprints.get(nid)
+    }
+
+
+def drop_deleted(store, ids):
+    """Forget vectors whose file is gone, so searches stop returning them."""
+    stale = [nid for nid in store.get(include=[])["ids"] if nid not in ids]
+    if stale:
+        store.delete(ids=stale)
+    return stale
 
 
 _clip = None
@@ -206,11 +239,14 @@ def clip():
 
 
 def clip_collection():
-    """Image vectors live apart from the text ones — different vector space."""
+    """CLIP vectors for every node — a different space from the text ones, so a
+    separate collection. Stored raw (uncentred), because a search query is a raw
+    CLIP vector too; the centring that fixes the modality gap is a layout step.
+    Image search filters this collection on media."""
     import chromadb
 
     return chromadb.PersistentClient(path=str(CHROMA)).get_or_create_collection(
-        "images", metadata=COSINE
+        "clip", metadata=COSINE
     )
 
 
@@ -238,27 +274,39 @@ def embed_clip_texts(texts):
     return vectors.cpu().tolist()
 
 
-def clip_vectors(nodes, texts):
-    """One CLIP vector per node: the picture itself for images, the words for the rest.
+def raw_clip(nodes, texts, wanted):
+    """Raw CLIP vectors for the given node ids: the picture for images, the words
+    for everything else."""
+    picked = [(n, t) for n, t in zip(nodes, texts) if n["id"] in wanted]
+    if not picked:
+        return {}
+    images = [n for n, _ in picked if n.get("media") == "image"]
+    documents = [(n, t) for n, t in picked if n.get("media") != "image"]
+    vectors = {}
+    if images:
+        for node, vector in zip(images, embed_images([LIBRARY / n["path"] for n in images])):
+            vectors[node["id"]] = vector
+    if documents:
+        encoded = embed_clip_texts([t for _, t in documents])
+        for (node, _), vector in zip(documents, encoded):
+            vectors[node["id"]] = vector
+    return vectors
 
-    CLIP's two modalities sit in separate cones — any image is closer to any
-    other image (~0.9) than to the text describing it (~0.2), which would make
-    the pictures one island in the galaxy no matter what they show. Centring
-    each modality on its own mean removes that offset, so an image's distance to
-    a document reflects what they have in common rather than which encoder
-    produced it.
+
+def centre_clip(nodes, by_id):
+    """Line the two CLIP modalities up on a common origin.
+
+    CLIP's image and text vectors sit in separate cones — any image is closer to
+    any other image (~0.9) than to the text describing it (~0.2) — so without
+    this the pictures form one island in the galaxy no matter what they show.
     """
     import numpy as np
 
-    vectors = np.asarray(embed_clip_texts(texts), dtype="float32")
+    vectors = np.asarray([by_id[n["id"]] for n in nodes], dtype="float32")
     is_image = np.array([n.get("media") == "image" for n in nodes])
-    if is_image.any():
-        vectors[is_image] = embed_images(
-            [LIBRARY / n["path"] for n, image in zip(nodes, is_image) if image]
-        )
+    if is_image.any() and not is_image.all():
         for group in (is_image, ~is_image):
-            if group.any():
-                vectors[group] -= vectors[group].mean(axis=0)
+            vectors[group] -= vectors[group].mean(axis=0)
         vectors /= np.maximum(np.linalg.norm(vectors, axis=1, keepdims=True), 1e-9)
     return vectors.tolist()
 
@@ -274,28 +322,95 @@ def embed_image_query(text):
     return vector.cpu().tolist()
 
 
-def store_images(nodes):
-    """Index every image node in CLIP space. Returns how many were stored."""
-    images = [n for n in nodes if n.get("media") == "image"]
-    if not images:
-        return 0
-    paths = [LIBRARY / n["path"] for n in images]
-    clip_collection().upsert(
-        ids=[n["id"] for n in images],
-        embeddings=embed_images(paths),
-        metadatas=[{"title": n["title"], "type": n["type"], "path": n["path"]} for n in images],
+def last_layout():
+    """Semantic coordinates from the previous graph.json, to keep the galaxy stable."""
+    out = DATA / "graph.json"
+    if not out.exists():
+        return {}
+    try:
+        graph = json.loads(out.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return {n["id"]: n["coordinates"]["semantic"] for n in graph.get("nodes", [])}
+
+
+def layout(ids, joint, stale, refit):
+    """Semantic coordinates: keep the old ones where nothing changed.
+
+    A full UMAP re-projection moves every node, which throws away the reader's
+    sense of where things are, so it happens only when asked for, when there is
+    no previous layout, or when enough of the library has changed that the old
+    one no longer describes it.
+    """
+    previous = last_layout()
+    settled = [i for i in ids if i not in stale and i in previous]
+    changed_share = 1 - len(settled) / len(ids)
+    if refit or not settled or changed_share > REFIT_RATIO:
+        why = "asked" if refit else ("no previous layout" if not settled
+                                     else f"{changed_share:.0%} of the library changed")
+        print(f"re-projecting the whole galaxy ({why})", flush=True)
+        return coords.semantic(joint)
+
+    index = {nid: i for i, nid in enumerate(ids)}
+    settled = set(settled)
+    moving = [i for i in ids if i not in settled]
+    if not moving:
+        return [previous[i] for i in ids]
+    kept = [i for i in ids if i in settled]
+    placed = coords.place(
+        [joint[index[i]] for i in moving],
+        [joint[index[i]] for i in kept],
+        [previous[i] for i in kept],
     )
-    return len(images)
+    print(f"placed {len(moving)} node(s); {len(settled)} kept their position", flush=True)
+    spots = dict(zip(moving, placed))
+    return [spots[i] if i in spots else previous[i] for i in ids]
 
 
-def build(found):
+def build(found, refit=False):
+    """Graph for the whole library, re-embedding only what changed.
+
+    UMAP still fits the entire corpus every time — it is a global layout, so one
+    new document moves every coordinate — but that costs seconds where embedding
+    a large library costs minutes.
+    """
     nodes, texts = [n for n, _ in found], [t for _, t in found]
-    vectors = embed(texts)
-    store_vectors(nodes, texts, vectors)
-    indexed_images = store_images(nodes)
-    if indexed_images:
-        print(f"indexed {indexed_images} images in CLIP space", flush=True)
-    semantic = coords.semantic(coords.join(vectors, clip_vectors(nodes, texts), CLIP_MIX))
+    ids = [n["id"] for n in nodes]
+    fingerprints = {n["id"]: n.pop("fingerprint") for n in nodes}
+
+    library, clips = collection(), clip_collection()
+    text_cache = reusable(library, ids, fingerprints)
+    clip_cache = reusable(clips, ids, fingerprints)
+    stale = {n["id"] for n in nodes if n["id"] not in text_cache or n["id"] not in clip_cache}
+    picked = [(n, t) for n, t in zip(nodes, texts) if n["id"] in stale]
+    if picked:
+        print(f"embedding {len(picked)} new or changed of {len(nodes)}", flush=True)
+
+    text_vectors = {**text_cache, **dict(zip(
+        [n["id"] for n, _ in picked], embed([t for _, t in picked]) if picked else [],
+    ))}
+    clip_by_id = {**clip_cache, **raw_clip(nodes, texts, stale)}
+
+    if picked:
+        library.upsert(
+            ids=[n["id"] for n, _ in picked],
+            embeddings=[text_vectors[n["id"]] for n, _ in picked],
+            documents=[t for _, t in picked],
+            metadatas=[metadata(n, fingerprints) for n, _ in picked],
+        )
+        clips.upsert(
+            ids=[n["id"] for n, _ in picked],
+            embeddings=[clip_by_id[n["id"]] for n, _ in picked],
+            metadatas=[metadata(n, fingerprints) for n, _ in picked],
+        )
+    for store in (library, clips):
+        for gone in drop_deleted(store, set(ids)):
+            print(f"dropped {gone}", flush=True)
+
+    joint = coords.join(
+        [text_vectors[i] for i in ids], centre_clip(nodes, clip_by_id), CLIP_MIX
+    )
+    semantic = layout(ids, joint, stale, refit)
 
     by_id = {n["id"]: n for n in nodes}
     edges, seen = [], set()
@@ -320,7 +435,7 @@ def build(found):
     return {"nodes": nodes, "edges": edges}
 
 
-def main():
+def main(refit=False):
     found = collect()
     if not found:
         raise SystemExit(
@@ -328,11 +443,11 @@ def main():
             "create <Type>/ folders there (Projects, Concepts, Sources, Fragments, Assets),\n"
             "or point LIBRARY_DIR at your own research folder."
         )
-    graph = build(found)
+    graph = build(found, refit=refit)
     out = DATA / "graph.json"
     out.write_text(json.dumps(graph, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {out} ({len(graph['nodes'])} nodes, {len(graph['edges'])} edges)", flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    main(refit="--refit" in sys.argv)

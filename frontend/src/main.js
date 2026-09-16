@@ -83,7 +83,15 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
   status.textContent = `"${query}" 검색 중… (첫 검색은 모델을 올리느라 몇 초 걸린다)`;
   const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`);
   if (!res.ok) {
-    status.textContent = `search failed: ${(await res.json()).detail ?? res.status}`;
+    // A 500 answers with plain text, so res.json() would throw and leave the
+    // search stuck on "검색 중…" with no explanation.
+    const body = await res.text();
+    let detail = body;
+    try {
+      detail = JSON.parse(body).detail ?? body;
+    } catch {}
+    status.textContent = `검색 실패 (${res.status}): ${detail.slice(0, 120)}`;
+    clearSearch();
     return;
   }
   const { results: found, images = [] } = await res.json();

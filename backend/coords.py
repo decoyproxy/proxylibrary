@@ -13,6 +13,7 @@ LAYER = {"Project": 90.0, "Concept": 30.0, "Source": -30.0, "Fragment": -70.0, "
 SECTOR = {"Art": 0, "Philosophy": 1, "Science": 2}
 EPOCH = 2025 * 12  # month zero of the temporal axis
 SPAN = 100.0  # semantic coordinates are normalised into +/- SPAN
+TEMPERATURE = 0.02  # how sharply place() favours the closest neighbour
 
 
 def sector(domain):
@@ -65,6 +66,14 @@ def join(text_vectors, clip_vectors, clip_mix):
 def semantic(vectors):
     """Project embeddings to 3D with UMAP, normalised into the +/- SPAN cube.
 
+    This is the full projection, and it is not stable across runs: UMAP's
+    optimisation is chaotic at this scale, and an input difference of 1e-6 — the
+    float32 round-trip through the vector store is enough — moves nodes across
+    the whole cube. Seeding it with the previous layout does not help, the
+    optimiser walks away from any starting point. So a re-ingest keeps the old
+    coordinates and uses `place()` for what changed; this runs only when the
+    layout is rebuilt outright.
+
     Falls back to a spiral when there are too few documents for UMAP to fit.
     """
     n = len(vectors)
@@ -91,6 +100,44 @@ def semantic(vectors):
             for x, y, z in scaled]
 
 
+def place(vectors, known_vectors, known_coords, k=5):
+    """Position new or edited nodes among the nodes that did not move.
+
+    Each one lands among its k nearest neighbours in the embedding space, nudged
+    so two identical documents do not occupy exactly the same point. The weights
+    are a sharp softmax rather than plain similarity: a flat mean of five
+    neighbours lands in the empty middle between clusters, which is how a note
+    about latent space ended up parked beside a lens flare photograph.
+
+    Cheap, and it keeps every other node exactly where the reader last saw it —
+    a full re-projection would move everything.
+    """
+    import numpy as np
+
+    if not len(known_vectors):
+        return None
+    if not len(vectors):  # nothing moved: a delete-only or metadata-only ingest
+        return []
+    new = np.asarray(vectors, dtype="float32")
+    old = np.asarray(known_vectors, dtype="float32")
+    new /= np.maximum(np.linalg.norm(new, axis=1, keepdims=True), 1e-9)
+    old /= np.maximum(np.linalg.norm(old, axis=1, keepdims=True), 1e-9)
+    coordinates = np.asarray(
+        [[c["x"], c["y"], c["z"]] for c in known_coords], dtype="float32"
+    )
+    rng = np.random.default_rng(42)
+    nudge = float(np.linalg.norm(coordinates.std(axis=0))) * 0.03 + 1e-3
+
+    placed = []
+    for row in new @ old.T:
+        top = np.argsort(row)[-min(k, len(row)):]
+        weights = np.exp((row[top] - row[top].max()) / TEMPERATURE)
+        centre = (coordinates[top] * weights[:, None]).sum(axis=0) / weights.sum()
+        x, y, z = centre + rng.normal(0, nudge, 3)
+        placed.append({"x": round(float(x), 1), "y": round(float(y), 1), "z": round(float(z), 1)})
+    return placed
+
+
 def demo():
     import numpy as np
 
@@ -98,6 +145,16 @@ def demo():
     assert temporal("2025-01-01", "Art", 3) == {"x": -76.0, "y": 0.0, "z": -55.0}
     assert temporal("2026-01-01", "Art", 3)["x"] == 92.0  # a year later, further along x
     assert len(semantic([[0.0, 1.0]] * 3)) == 3  # small-input fallback, no UMAP
+    # A new node lands next to the neighbour it matches, not at the origin.
+    known = [[1.0, 0.0], [0.0, 1.0]]
+    spots = [{"x": 50.0, "y": 0.0, "z": 0.0}, {"x": -50.0, "y": 0.0, "z": 0.0}]
+    near = place([[0.99, 0.01]], known, spots, k=1)[0]
+    assert near["x"] > 40, near
+    # With a far-off second neighbour in range, the nearest still wins.
+    both = place([[0.99, 0.01]], known, spots, k=2)[0]
+    assert both["x"] > 40, both
+    assert place([[1.0, 0.0]], [], [], k=1) is None
+    assert place([], known, spots, k=1) == []
 
     # Two documents whose text differs but whose images match should sit closer
     # together in the joint space as clip_mix rises.

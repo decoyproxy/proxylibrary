@@ -46,6 +46,7 @@ def search_images(q, limit):
         found = collection.query(
             query_embeddings=ingest.embed_image_query(q),
             n_results=min(limit, collection.count()),
+            where={"media": "image"},  # the collection also holds document vectors
         )
     except Exception:  # no index, or no CLIP weights on this machine
         return []
