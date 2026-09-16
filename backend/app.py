@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 import ingest
+import hybrid_search
 import store
 from routes_validator import router as validator_router
 
@@ -473,3 +474,9 @@ def search(q: str, limit: int = 8):
             )
         ],
     }
+
+
+@app.get("/api/v1/search/hybrid")
+@serialized
+def search_hybrid(q: str, limit: int = 8):
+    return hybrid_search.search(q, limit, library())
