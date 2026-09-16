@@ -8,4 +8,4 @@ tags: print
 
 # RAW_0522.ARW - lens flare study
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]

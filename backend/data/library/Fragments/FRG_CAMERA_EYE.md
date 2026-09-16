@@ -8,4 +8,4 @@ tags: perception, materiality
 
 # Dump: camera is not an eye
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]

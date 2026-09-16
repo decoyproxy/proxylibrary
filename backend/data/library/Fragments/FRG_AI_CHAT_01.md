@@ -8,4 +8,4 @@ tags: machine vision, embedding
 
 # AI chat log: what does a sensor want
 
-- [[CON_MACHINE_VISION]]
+- [RESEARCH] [[CON_MACHINE_VISION]]

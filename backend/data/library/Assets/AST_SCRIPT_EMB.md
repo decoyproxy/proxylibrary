@@ -8,4 +8,4 @@ tags: embedding
 
 # embed_gallery.py
 
-- [[PRJ_UMWELT]]
+- [RESEARCH] [[PRJ_UMWELT]]

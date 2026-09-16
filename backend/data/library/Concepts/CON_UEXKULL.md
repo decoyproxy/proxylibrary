@@ -8,5 +8,5 @@ tags: umwelt, perception
 
 # Umwelt (von Uexkull)
 
-- [[CON_NONHUMAN]]
-- [[PRJ_UMWELT]]
+- [RESEARCH] [[CON_NONHUMAN]]
+- [RESEARCH] [[PRJ_UMWELT]]

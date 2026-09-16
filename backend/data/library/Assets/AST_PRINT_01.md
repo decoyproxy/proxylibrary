@@ -8,4 +8,4 @@ tags: darkroom, print
 
 # Print test - platinum palladium
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]

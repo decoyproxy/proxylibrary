@@ -8,4 +8,4 @@ tags: fieldwork, night
 
 # KakaoTalk dump: night walk, IR trail cam
 
-- [[PRJ_UMWELT]]
+- [RESEARCH] [[PRJ_UMWELT]]

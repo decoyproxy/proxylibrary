@@ -8,4 +8,4 @@ tags: print
 
 # Photobook reference: Provoke
 
-- [[FRG_STUDIO_01]]
+- [RESEARCH] [[FRG_STUDIO_01]]

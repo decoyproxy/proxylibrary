@@ -8,5 +8,5 @@ tags: umwelt, perception
 
 # A Foray into the Worlds of Animals and Humans
 
-- [[FRG_TICK]]
-- [[CON_UEXKULL]]
+- [RESEARCH] [[FRG_TICK]]
+- [RESEARCH] [[CON_UEXKULL]]

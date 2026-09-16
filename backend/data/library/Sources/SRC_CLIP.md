@@ -8,5 +8,5 @@ tags: machine vision, embedding
 
 # Learning Transferable Visual Models (CLIP)
 
-- [[FRG_AI_CHAT_01]]
-- [[CON_LATENT]]
+- [RESEARCH] [[FRG_AI_CHAT_01]]
+- [RESEARCH] [[CON_LATENT]]

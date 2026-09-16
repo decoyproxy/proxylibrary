@@ -8,4 +8,4 @@ tags: materiality
 
 # Indexicality
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]

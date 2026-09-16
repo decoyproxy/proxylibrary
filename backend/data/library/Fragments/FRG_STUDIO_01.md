@@ -8,4 +8,4 @@ tags: darkroom, materiality
 
 # Studio note: darkroom smell as data
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]

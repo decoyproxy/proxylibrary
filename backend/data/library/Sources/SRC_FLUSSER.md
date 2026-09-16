@@ -8,6 +8,6 @@ tags: materiality, print
 
 # Towards a Philosophy of Photography
 
-- [[FRG_CAMERA_EYE]]
-- [[CON_MATERIALITY]]
-- [[CON_INDEXICALITY]]
+- [RESEARCH] [[FRG_CAMERA_EYE]]
+- [RESEARCH] [[CON_MATERIALITY]]
+- [RESEARCH] [[CON_INDEXICALITY]]

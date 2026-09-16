@@ -8,5 +8,5 @@ tags: machine vision
 
 # Trevor Paglen - Invisible Images
 
-- [[FRG_AI_CHAT_01]]
-- [[CON_MACHINE_VISION]]
+- [RESEARCH] [[FRG_AI_CHAT_01]]
+- [RESEARCH] [[CON_MACHINE_VISION]]

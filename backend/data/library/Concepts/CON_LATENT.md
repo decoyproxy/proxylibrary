@@ -8,5 +8,5 @@ tags: latent space, dimensionality reduction
 
 # Latent space
 
-- [[PRJ_DECOY]]
+- [RESEARCH] [[PRJ_DECOY]]
 
