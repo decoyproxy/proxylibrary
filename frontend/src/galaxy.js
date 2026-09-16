@@ -14,6 +14,9 @@ const TRANSITION_MS = 900;
 
 // Shared across every node mesh; per-node size comes from mesh.scale.
 const SPHERE = new THREE.SphereGeometry(1, 16, 12);
+const PLANE = new THREE.PlaneGeometry(1, 1);
+const TEXTURES = new THREE.TextureLoader();
+const THUMB_SCALE = 3.4; // a thumbnail reads at roughly 3.4x the radius of a dot
 
 export function createGalaxy(canvas, graph, onSelect) {
   const scene = new THREE.Scene();
@@ -39,8 +42,10 @@ export function createGalaxy(canvas, graph, onSelect) {
   scene.add(key);
 
   const byId = new Map();
-  for (const node of graph.nodes) {
-    const mesh = new THREE.Mesh(
+  const billboards = []; // thumbnails are flat, so they must face the camera
+
+  function dot(node) {
+    return new THREE.Mesh(
       SPHERE,
       new THREE.MeshStandardMaterial({
         color: TYPE_COLOR[node.type] ?? 0xffffff,
@@ -50,8 +55,48 @@ export function createGalaxy(canvas, graph, onSelect) {
         transparent: true,
       }),
     );
+  }
+
+  // Image nodes render as their own picture. The texture arrives later, so the
+  // plane starts square and takes the file's aspect ratio once it has loaded.
+  function thumbnail(node, size) {
+    const material = new THREE.MeshBasicMaterial({ transparent: true, toneMapped: false });
+    const mesh = new THREE.Mesh(PLANE, material);
+    // A dark photograph on a dark background has no edge; this card gives it one.
+    const card = new THREE.Mesh(
+      PLANE,
+      new THREE.MeshBasicMaterial({ color: 0x3a3a4c, transparent: true }),
+    );
+    card.scale.set(1.06, 1.06, 1);
+    card.position.z = -0.01;
+    card.raycast = () => {}; // the picture takes the clicks, not its frame
+    mesh.add(card);
+    TEXTURES.load(
+      `/media/${node.path}`,
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        material.map = texture;
+        material.needsUpdate = true;
+        const { width, height } = texture.image;
+        mesh.scale.set(size * THUMB_SCALE * (width / height), size * THUMB_SCALE, 1);
+      },
+      undefined,
+      () => {
+        // Missing file: fall back to a plain dot rather than an invisible node.
+        material.color.set(TYPE_COLOR[node.type] ?? 0xffffff);
+      },
+    );
+    material.color.setScalar(0.72);
+    billboards.push(mesh);
+    return mesh;
+  }
+
+  for (const node of graph.nodes) {
     const size = 1.6 + node.importance * 1.3;
-    mesh.scale.setScalar(size);
+    const isImage = node.media === 'image';
+    const mesh = isImage ? thumbnail(node, size) : dot(node);
+    if (isImage) mesh.scale.set(size * THUMB_SCALE, size * THUMB_SCALE, 1);
+    else mesh.scale.setScalar(size);
     mesh.userData.node = node;
     if (node.importance >= 4) {
       const el = document.createElement('div');
@@ -60,6 +105,7 @@ export function createGalaxy(canvas, graph, onSelect) {
       const label = new CSS2DObject(el);
       label.position.y = size + 3;
       mesh.add(label);
+      mesh.userData.label = label; // not children[0] — thumbnails add a frame first
     }
     scene.add(mesh);
     byId.set(node.id, mesh);
@@ -124,6 +170,13 @@ export function createGalaxy(canvas, graph, onSelect) {
     edgeGeom.computeBoundingSphere();
   }
 
+  // Lit dots brighten; thumbnails, which are unlit, get a white tint instead.
+  function setSelected(mesh, on) {
+    if (!mesh) return;
+    if ('emissiveIntensity' in mesh.material) mesh.material.emissiveIntensity = on ? 1.6 : 0.5;
+    else mesh.material.color.setScalar(on ? 1 : 0.72);
+  }
+
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let selected = null;
@@ -135,9 +188,9 @@ export function createGalaxy(canvas, graph, onSelect) {
     );
     raycaster.setFromCamera(pointer, camera);
     const hit = raycaster.intersectObjects([...byId.values()], false)[0];
-    if (selected) selected.material.emissiveIntensity = 0.5;
+    setSelected(selected, false);
     selected = hit?.object ?? null;
-    if (selected) selected.material.emissiveIntensity = 1.6;
+    setSelected(selected, true);
     onSelect(selected?.userData.node ?? null);
   });
 
@@ -146,7 +199,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     for (const [id, mesh] of byId) {
       const dim = ids !== null && !ids.has(id);
       mesh.material.opacity = dim ? 0.08 : 1;
-      const label = mesh.children[0];
+      const label = mesh.userData.label;
       if (label) label.element.style.opacity = dim ? 0.15 : 1;
     }
   }
@@ -180,6 +233,7 @@ export function createGalaxy(canvas, graph, onSelect) {
       for (const [id, mesh] of byId) mesh.position.lerpVectors(from.get(id), to.get(id), k);
       updateEdges();
     }
+    for (const mesh of billboards) mesh.quaternion.copy(camera.quaternion);
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
