@@ -5,6 +5,7 @@ import sys
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, field_validator
 
 import ingest
 import store
@@ -67,9 +68,64 @@ def open_file(node_id: str):
     return {"opened": str(target)}
 
 
+DOMAINS = ("Art", "Science", "Philosophy")
+
+
+class Edit(BaseModel):
+    """What the inspector is allowed to change. Everything else is off limits:
+    this writes to the reader's own research files."""
+
+    importance: int | None = Field(default=None, ge=1, le=5)
+    domain: str | None = None
+    tags: list[str] | None = None
+
+    @field_validator("domain")
+    @classmethod
+    def known_domain(cls, value):
+        if value not in DOMAINS:
+            raise ValueError(f"domain must be one of {', '.join(DOMAINS)}")
+        return value
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, values):
+        tags = [t.strip() for t in values if t.strip()]
+        if len(tags) > 20 or any(len(t) > 40 for t in tags):
+            raise ValueError("at most 20 tags, 40 characters each")
+        if any("," in t or "\n" in t for t in tags):
+            raise ValueError("tags cannot contain commas or newlines")
+        return tags
+
+
 @app.get("/api/v1/nodes")
 def nodes():
     return store.load()
+
+
+@app.patch("/api/v1/nodes/{node_id}")
+def edit_node(node_id: str, edit: Edit):
+    """Write the change back to the file, then re-ingest and return the node.
+
+    The file is the source of truth, so it is updated first and everything else
+    is derived from it — no path where the graph claims something the note on
+    disk does not say. Re-ingest is incremental: the edited file is the only one
+    whose vectors are recomputed, and every other node keeps its position.
+    """
+    changes = edit.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(400, "nothing to change")
+    target = library_file(node_id)
+    if "tags" in changes:
+        changes["tags"] = ", ".join(changes["tags"])
+
+    written = ingest.write_meta(target, changes)
+    ingest.main()
+    updated = next((n for n in store.load()["nodes"] if n["id"] == node_id), None)
+    if not updated:
+        raise HTTPException(500, f"{node_id} vanished from the graph after the edit")
+    global _collection
+    _collection = None  # the collection handle outlives the re-ingest; the data does not
+    return {"node": updated, "wrote": str(written.relative_to(ingest.LIBRARY))}
 
 
 def search_images(q, limit):

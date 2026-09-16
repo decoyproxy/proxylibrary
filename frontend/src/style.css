@@ -226,3 +226,29 @@ body {
     flex-basis: 100%;
   }
 }
+
+#inspector .stars { display: flex; gap: 2px; }
+#inspector .stars button {
+  padding: 0 1px;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+#inspector .stars button:hover { color: var(--dim); }
+#inspector select,
+#inspector input.tags {
+  width: 100%;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+#inspector select:hover,
+#inspector input.tags:hover { border-color: var(--line); }
+#inspector select:focus,
+#inspector input.tags:focus { outline: none; border-color: var(--fg); }

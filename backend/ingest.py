@@ -53,6 +53,7 @@ CHROMA = DATA / "chroma"
 MODEL = os.environ.get("EMBED_MODEL", "intfloat/multilingual-e5-base")
 PREFIX = os.environ.get("EMBED_PREFIX", "passage: ")
 TEXT_SUFFIXES = {".md", ".txt", ".json"}
+SIDECAR = ".md"  # metadata for a file that cannot hold front matter itself
 PDF_SUFFIXES = {".pdf"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 PDF_PAGES = int(os.environ.get("PDF_PAGES", 20))  # enough to characterise a paper
@@ -99,12 +100,8 @@ def media_kind(path):
     return "text" if suffix in TEXT_SUFFIXES else None
 
 
-def parse(path):
-    """-> (meta dict, body text). Flat `key: value` front matter only."""
-    kind = media_kind(path)
-    if kind == "pdf":
-        return {}, read_pdf(path)
-    raw = path.read_text(encoding="utf-8", errors="replace") if kind == "text" else ""
+def front_matter(raw):
+    """-> (meta dict, body). Flat `key: value` only; unknown keys are kept."""
     meta, body = {}, raw
     match = FRONT_MATTER.match(raw)
     if match:
@@ -114,6 +111,58 @@ def parse(path):
             if value.strip():
                 meta[key.strip().lower()] = value.strip()
     return meta, body
+
+
+def meta_path(path):
+    """Where a node's front matter lives.
+
+    Markdown carries its own. A photograph or a PDF cannot, so its metadata goes
+    in a sidecar named after the whole file — "plate.jpg.md", not "plate.md",
+    which would collide with the image's own node id.
+    """
+    if media_kind(path) == "text":
+        return path
+    return path.with_name(path.name + SIDECAR)
+
+
+def parse(path):
+    """-> (meta dict, body text) for one library file, sidecar included."""
+    kind = media_kind(path)
+    if kind == "pdf":
+        body = read_pdf(path)
+    elif kind == "text":
+        body = path.read_text(encoding="utf-8", errors="replace")
+    else:
+        body = ""
+    meta, body = front_matter(body)
+    sidecar = meta_path(path)
+    if sidecar != path and sidecar.exists():
+        extra, note = front_matter(sidecar.read_text(encoding="utf-8", errors="replace"))
+        meta.update(extra)
+        body = f"{body}\n{note}".strip()
+    return meta, body
+
+
+def write_meta(path, updates):
+    """Update front matter in place, keeping the body and any keys we don't know.
+
+    Written to a temporary file and renamed over the original, so an interrupted
+    write cannot leave someone's research note truncated.
+    """
+    target = meta_path(path)
+    raw = target.read_text(encoding="utf-8") if target.exists() else ""
+    fields, body = front_matter(raw)
+    if not FRONT_MATTER.match(raw):
+        body = raw  # no front matter yet: the whole file is body
+    fields.update({k: v for k, v in updates.items() if v is not None})
+
+    block = "\n".join(f"{key}: {value}" for key, value in fields.items())
+    body = body.lstrip("\n")
+    rewritten = f"---\n{block}\n---\n" + (f"\n{body}" if body else "")
+    temporary = target.with_name(f".{target.name}.writing")
+    temporary.write_text(rewritten, encoding="utf-8")
+    os.replace(temporary, target)
+    return target
 
 
 def fingerprint(path):
@@ -132,6 +181,9 @@ def collect():
         for path in sorted(folder.rglob("*")):
             if not path.is_file() or path.name.startswith(".") or not media_kind(path):
                 continue
+            # "plate.jpg.md" is metadata for "plate.jpg", not a node of its own.
+            if path.suffix == SIDECAR and path.with_suffix("").exists():
+                continue
             meta, body = parse(path)
             try:
                 importance = int(meta.get("importance", 3))
@@ -143,13 +195,18 @@ def collect():
                 "type": ntype,
                 "importance": max(1, min(5, importance)),
                 "domain": meta.get("domain", "Art"),
+                "tags": [t.strip() for t in meta.get("tags", "").split(",") if t.strip()],
                 "date": meta.get("date", date_cls.fromtimestamp(path.stat().st_mtime).isoformat()),
                 "path": str(path.relative_to(LIBRARY)),
                 "media": media_kind(path),
                 "fingerprint": fingerprint(path),
                 "links": WIKI_LINK.findall(body),
             }
-            found.append((node, f"{node['title']}\n\n{body}".strip() or node["title"]))
+            # Tags are part of what a document is about, so they belong in the
+            # text that gets embedded, not only in the metadata.
+            labels = ", ".join(node["tags"])
+            text = "\n\n".join(part for part in (node["title"], labels, body) if part).strip()
+            found.append((node, text or node["title"]))
     return found
 
 
@@ -192,7 +249,7 @@ def collection():
 
 def metadata(node, fingerprints, model):
     fields = ("title", "type", "domain", "importance", "path", "media")
-    return {**{k: node[k] for k in fields},
+    return {**{k: node[k] for k in fields}, "tags": ", ".join(node["tags"]),
             "fingerprint": fingerprints[node["id"]], "model": model}
 
 

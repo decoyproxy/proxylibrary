@@ -3,6 +3,66 @@ import { createGalaxy } from './galaxy.js';
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
 
+const DOMAINS = ['Art', 'Science', 'Philosophy'];
+
+// Writes go to the file first and the graph is rebuilt from it, so the card
+// shows what is actually on disk rather than what was typed into it.
+async function saveNode(node, changes) {
+  status.textContent = `Saving ${node.id}…`;
+  const res = await fetch(`/api/v1/nodes/${encodeURIComponent(node.id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(changes),
+  });
+  const body = await res.text();
+  let payload = body;
+  try {
+    payload = JSON.parse(body);
+  } catch {}
+  if (!res.ok) {
+    status.textContent = `Save failed (${res.status}): ${JSON.stringify(payload?.detail ?? payload).slice(0, 120)}`;
+    return false;
+  }
+  Object.assign(node, payload.node); // same object the graph holds
+  galaxy.updateNode(node);
+  showNode(graph, node);
+  status.textContent = `Saved to ${payload.wrote}`;
+  return true;
+}
+
+function buildEditor(node) {
+  const stars = inspector.querySelector('.stars');
+  for (let value = 1; value <= 5; value++) {
+    const star = document.createElement('button');
+    star.type = 'button';
+    star.textContent = value <= node.importance ? '★' : '☆';
+    star.title = `Importance ${value}`;
+    star.addEventListener('click', () => saveNode(node, { importance: value }));
+    stars.append(star);
+  }
+
+  const domain = inspector.querySelector('.domain');
+  for (const name of DOMAINS.includes(node.domain) ? DOMAINS : [node.domain, ...DOMAINS]) {
+    const option = document.createElement('option');
+    option.value = option.textContent = name;
+    option.selected = name === node.domain;
+    domain.append(option);
+  }
+  domain.addEventListener('change', () => saveNode(node, { domain: domain.value }));
+
+  // Commit on Enter or on leaving the field, but only when something changed —
+  // every save rewrites the file and re-embeds the document.
+  const tags = inspector.querySelector('.tags');
+  const original = (node.tags ?? []).join(', ');
+  tags.value = original;
+  const commit = () => {
+    if (tags.value.trim() === original.trim()) return;
+    saveNode(node, { tags: tags.value.split(',') });
+  };
+  tags.addEventListener('keydown', (event) => event.key === 'Enter' && tags.blur());
+  tags.addEventListener('blur', commit);
+}
+
 function showNode(graph, node) {
   if (!node) {
     inspector.hidden = true;
@@ -19,10 +79,11 @@ function showNode(graph, node) {
     <h2></h2>
     <dl>
       <dt>type</dt><dd class="v-type"></dd>
-      <dt>domain</dt><dd class="v-domain"></dd>
-      <dt>importance</dt><dd class="v-importance"></dd>
       <dt>date</dt><dd class="v-date"></dd>
       <dt>file</dt><dd><button type="button" class="open" title="Open in the macOS default app"></button></dd>
+      <dt>importance</dt><dd class="stars" role="group" aria-label="Importance"></dd>
+      <dt>domain</dt><dd><select class="domain"></select></dd>
+      <dt>tags</dt><dd><input class="tags" placeholder="comma, separated" aria-label="Tags" /></dd>
     </dl>
     <ul></ul>`;
   if (node.media === 'image') {
@@ -33,9 +94,10 @@ function showNode(graph, node) {
     inspector.querySelector('h2').after(img);
   }
   inspector.querySelector('h2').textContent = node.title;
-  for (const key of ['type', 'domain', 'importance', 'date']) {
+  for (const key of ['type', 'date']) {
     inspector.querySelector(`.v-${key}`).textContent = node[key] ?? '—';
   }
+  buildEditor(node);
 
   // Hands the file to macOS, which knows what opens a .ARW better than a
   // browser does. The server takes the node id, never a path.

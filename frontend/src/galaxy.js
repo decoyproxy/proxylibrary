@@ -47,6 +47,37 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   const byId = new Map();
   const billboards = []; // thumbnails are flat, so they must face the camera
+  const labelled = new Set();
+
+  // Only the important nodes are labelled — and an edit can change that, so
+  // this both creates and removes.
+  function labelFor(mesh) {
+    const node = mesh.userData.node;
+    const wanted = node.importance >= 4;
+    if (wanted && !mesh.userData.label) {
+      const el = document.createElement('div');
+      el.className = 'label';
+      const label = new CSS2DObject(el);
+      mesh.add(label);
+      mesh.userData.label = label;
+      labelled.add(mesh);
+    } else if (!wanted && mesh.userData.label) {
+      mesh.remove(mesh.userData.label);
+      mesh.userData.label.element.remove();
+      mesh.userData.label = null;
+      mesh.userData.size = null;
+      labelled.delete(mesh);
+    }
+    const label = mesh.userData.label;
+    if (!label) return;
+    label.element.textContent = node.title;
+    mesh.userData.size = null; // re-measure: the text may have changed width
+    // The label is a child of a mesh scaled by `size`, so a local offset is
+    // multiplied by it — a plain `size + 3` put the label size-times too far
+    // above its node. Divide it back out to sit 3 units clear of the surface.
+    const size = 1.6 + node.importance * 1.3;
+    label.position.y = (size + 3) / (mesh.userData.restScale?.y ?? size);
+  }
 
   function dot(node) {
     return new THREE.Mesh(
@@ -104,23 +135,11 @@ export function createGalaxy(canvas, graph, onSelect) {
     else mesh.scale.setScalar(size);
     mesh.userData.restScale = mesh.scale.clone();
     mesh.userData.node = node;
-    if (node.importance >= 4) {
-      const el = document.createElement('div');
-      el.className = 'label';
-      el.textContent = node.title;
-      const label = new CSS2DObject(el);
-      // The label is a child of a mesh scaled by `size`, so a local offset is
-      // multiplied by it — a plain `size + 3` put the label size-times too far
-      // above its node. Divide it back out to sit 3 units clear of the surface.
-      const scale = isImage ? size * THUMB_SCALE : size;
-      label.position.y = (size + 3) / scale;
-      mesh.add(label);
-      mesh.userData.label = label; // not children[0] — thumbnails add a frame first
-    }
+    labelFor(mesh);
     scene.add(mesh);
     byId.set(node.id, mesh);
   }
-  const labelled = [...byId.values()].filter((mesh) => mesh.userData.label);
+
 
   const edges = graph.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
   const positions = new Float32Array(edges.length * 6);
@@ -144,7 +163,10 @@ export function createGalaxy(canvas, graph, onSelect) {
   let to = new Map();
   let startedAt = -Infinity;
 
+  let currentView = 'semantic';
+
   function setView(view) {
+    currentView = view;
     from = new Map([...byId].map(([id, mesh]) => [id, mesh.position.clone()]));
     to = new Map(
       graph.nodes.map((n) => {
@@ -224,6 +246,30 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
+  // An edited node: new size, new label, and a glide to wherever the change
+  // moved it in the view on screen. Everything else stays where it is — the
+  // `from` map is refreshed from current positions, so their lerp is a no-op.
+  function updateNode(node) {
+    const mesh = byId.get(node.id);
+    if (!mesh) return;
+    mesh.userData.node = node;
+    const size = 1.6 + node.importance * 1.3;
+    if (node.media === 'image') {
+      const aspect = mesh.userData.restScale.x / mesh.userData.restScale.y;
+      mesh.userData.restScale.set(size * THUMB_SCALE * aspect, size * THUMB_SCALE, 1);
+    } else {
+      mesh.userData.restScale.setScalar(size);
+    }
+    mesh.scale.copy(mesh.userData.restScale);
+    labelFor(mesh);
+
+    const spot = node.coordinates[currentView];
+    from = new Map([...byId].map(([id, m]) => [id, m.position.clone()]));
+    to.set(node.id, new THREE.Vector3(spot.x, spot.y, spot.z));
+    startedAt = performance.now();
+    placeLabels();
+  }
+
   // Two independent filters decide what is drawn — the type toggles and the
   // timeline — so neither may write mesh.visible directly or the last one to
   // run would undo the other.
@@ -268,7 +314,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     const width = renderer.domElement.clientWidth;
     const height = renderer.domElement.clientHeight;
     const reach = camera.position.distanceTo(controls.target) * LABEL_FADE;
-    const ranked = labelled
+    const ranked = [...labelled]
       .map((mesh) => ({ mesh, distance: camera.position.distanceTo(mesh.position) }))
       .sort((a, b) =>
         b.mesh.userData.node.importance - a.mesh.userData.node.importance ||
@@ -354,5 +400,5 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
   requestAnimationFrame(frame);
 
-  return { setView, focus, highlight, setTypes, setCutoff, typeColors: TYPE_COLOR };
+  return { setView, focus, highlight, setTypes, setCutoff, updateNode, typeColors: TYPE_COLOR };
 }
