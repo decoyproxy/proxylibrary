@@ -135,3 +135,26 @@ test('forgetting the view being shown drops it from the URL as well', async () =
   assert.equal(browser.location.search, '');
   assert.deepEqual(manager.names(), []);
 });
+
+// The route landed in 4ce4a40 (backend/routes_presets.py): GET returns
+// { presets: { name: state } }, POST takes { name, state } and answers 201,
+// DELETE takes the name in the path. This holds the client to that contract.
+test('the remote store speaks the shape backend/routes_presets.py serves', async () => {
+  const sent = [];
+  const store = remotePresetStore({
+    fetch: async (url, options) => {
+      sent.push({ url, method: options.method ?? 'GET', body: options.body });
+      return { ok: true, status: 201, json: async () => ({ presets: { 'Umwelt set': { view: 'semantic' } } }) };
+    },
+  });
+
+  assert.deepEqual(await store.all(), { 'Umwelt set': { view: 'semantic' } });
+  await store.put('Umwelt set', { nodes: ['CON_UEXKULL'], view: 'semantic' });
+
+  assert.equal(sent[0].url, '/api/v1/presets');
+  assert.deepEqual(sent[1], {
+    url: '/api/v1/presets',
+    method: 'POST',
+    body: JSON.stringify({ name: 'Umwelt set', state: { nodes: ['CON_UEXKULL'], view: 'semantic' } }),
+  });
+});
