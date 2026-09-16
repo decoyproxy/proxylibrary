@@ -435,3 +435,28 @@ body {
   cursor: pointer;
 }
 #inspector .delete:hover { border-color: #be185d; color: #be185d; }
+
+#presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: auto;
+  flex-basis: 100%;
+}
+#presets button {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--dim);
+  cursor: pointer;
+  font: inherit;
+}
+#presets button:hover { color: var(--fg); border-color: var(--fg); }
+#presets button[aria-pressed='true'] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+#presets .forget { opacity: 0.5; }
+#presets .forget:hover { opacity: 1; }
+#presets .save-preset { border-style: dashed; }

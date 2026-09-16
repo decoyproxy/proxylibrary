@@ -25,8 +25,8 @@ async function saveNode(node, changes) {
   }
   Object.assign(node, payload.node); // same object the graph holds
   galaxy.updateNode(node);
-  refreshTypes();
-  refreshDomains();
+  typeBar.refresh();
+  domainBar.refresh();
   refreshTags();
   refreshTagList();
   galaxy.setTags(picked);
@@ -129,7 +129,7 @@ async function changeLinks(node, request) {
   graph.edges = payload.edges;
   galaxy.setEdges(graph.edges);
   galaxy.updateNode(node);
-  refreshRelations();
+  relationBar.refresh();
   showNode(graph, node);
   status.textContent = `Saved to ${payload.wrote}`;
 }
@@ -157,9 +157,9 @@ async function deleteNode(node) {
   graph.nodes = payload.nodes;
   graph.edges = payload.edges;
   galaxy.setEdges(graph.edges);
-  refreshTypes();
-  refreshDomains();
-  refreshRelations();
+  typeBar.refresh();
+  domainBar.refresh();
+  relationBar.refresh();
   refreshTags();
   refreshTagList();
   refreshNodeList();
@@ -369,6 +369,11 @@ function filterBar(nav, keyOf, order, colourOf, apply) {
     }
   }
 
+  function sync() {
+    for (const b of nav.children) b.setAttribute('aria-pressed', String(shown.has(b.dataset.value)));
+    apply(shown);
+  }
+
   nav.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-value]');
     if (!button) return;
@@ -378,16 +383,25 @@ function filterBar(nav, keyOf, order, colourOf, apply) {
     if (shown.has(value) && shown.size === 1) values.forEach((v) => shown.add(v));
     else if (shown.has(value)) shown.delete(value);
     else shown.add(value);
-    for (const b of nav.children) b.setAttribute('aria-pressed', String(shown.has(b.dataset.value)));
-    apply(shown);
+    sync();
   });
 
   refresh();
   apply(shown);
-  return refresh;
+  return {
+    refresh,
+    values: () => [...shown],
+    // A preset may name a value this library no longer has; keep the rest.
+    select(wanted) {
+      shown.clear();
+      for (const value of wanted) if (values.includes(value)) shown.add(value);
+      if (!shown.size) values.forEach((value) => shown.add(value));
+      sync();
+    },
+  };
 }
 
-const refreshTypes = filterBar(
+const typeBar = filterBar(
   document.querySelector('#types'),
   (node) => node.type,
   TYPE_ORDER,
@@ -459,7 +473,7 @@ refreshTags();
 refreshTagList();
 refreshNodeList();
 
-const refreshRelations = filterBar(
+const relationBar = filterBar(
   document.querySelector('#relations'),
   null,
   RELATIONS,
@@ -467,7 +481,7 @@ const refreshRelations = filterBar(
   (shown) => galaxy.setRelations(shown),
 );
 
-const refreshDomains = filterBar(
+const domainBar = filterBar(
   document.querySelector('#domains'),
   (node) => node.domain,
   DOMAIN_ORDER,
@@ -539,9 +553,9 @@ composer.addEventListener('submit', async (event) => {
   graph.edges = parsed.edges;
   galaxy.addNode(parsed.node);
   galaxy.setEdges(graph.edges);
-  refreshTypes();
-  refreshDomains();
-  refreshRelations();
+  typeBar.refresh();
+  domainBar.refresh();
+  relationBar.refresh();
   refreshTags();
   refreshTagList();
   refreshNodeList();
@@ -549,6 +563,115 @@ composer.addEventListener('submit', async (event) => {
   galaxy.focus(parsed.node.id);
   showNode(graph, parsed.node);
   status.textContent = `Wrote ${parsed.wrote}`;
+});
+
+// Saved views. A research angle — "Art plus SPARK edges" — is a combination of
+// every filter at once, and retyping it is the kind of thing you stop doing.
+// They live in this browser: the library is local, and a preset is a way of
+// looking at it rather than part of it.
+const PRESETS_KEY = 'proxylibrary.presets';
+const presetsNav = document.querySelector('#presets');
+
+function loadPresets() {
+  try {
+    return JSON.parse(localStorage.getItem(PRESETS_KEY)) ?? {};
+  } catch {
+    return {}; // unreadable storage is not a reason to lose the galaxy
+  }
+}
+
+function savePresets(presets) {
+  try {
+    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
+  } catch (error) {
+    status.textContent = `Could not save the view: ${error.message}`;
+  }
+}
+
+function currentState() {
+  return {
+    view: document.querySelector('#views button.active').dataset.view,
+    types: typeBar.values(),
+    domains: domainBar.values(),
+    relations: relationBar.values(),
+    tags: [...picked],
+    month: months[Number(scrub.value)] ?? null,
+  };
+}
+
+function applyState(state) {
+  if (state.view) document.querySelector(`[data-view="${state.view}"]`)?.click();
+  if (state.types) typeBar.select(state.types);
+  if (state.domains) domainBar.select(state.domains);
+  if (state.relations) relationBar.select(state.relations);
+  if (state.tags) {
+    picked.clear();
+    for (const tag of state.tags) picked.add(tag);
+    refreshTags();
+    galaxy.setTags(picked);
+  }
+  const index = state.month ? months.indexOf(state.month) : -1;
+  if (index >= 0) {
+    scrub.value = index;
+    if (state.view === 'temporal') showMonth(index);
+  }
+}
+
+function renderPresets() {
+  const presets = loadPresets();
+  const current = new URLSearchParams(location.search).get('preset');
+  presetsNav.replaceChildren(...Object.keys(presets).sort().map((name) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.preset = name;
+    button.setAttribute('aria-pressed', String(name === current));
+    button.innerHTML = '<span class="name"></span><span class="forget">×</span>';
+    button.querySelector('.name').textContent = name;
+    return button;
+  }));
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'save-preset';
+  save.textContent = '+ Save view';
+  save.addEventListener('click', () => {
+    const name = prompt('Name this view')?.trim();
+    if (!name) return;
+    savePresets({ ...loadPresets(), [name]: currentState() });
+    selectPreset(name);
+  });
+  presetsNav.append(save);
+}
+
+function selectPreset(name) {
+  const preset = loadPresets()[name];
+  if (!preset) return;
+  applyState(preset);
+  const url = new URL(location.href);
+  url.searchParams.set('preset', name);
+  history.replaceState(null, '', url);
+  renderPresets();
+  status.textContent = `View "${name}"`;
+}
+
+presetsNav.addEventListener('click', (event) => {
+  const forget = event.target.closest('.forget');
+  const button = event.target.closest('button[data-preset]');
+  if (!button) return;
+  const name = button.dataset.preset;
+  if (forget) {
+    const presets = loadPresets();
+    delete presets[name];
+    savePresets(presets);
+    if (new URLSearchParams(location.search).get('preset') === name) {
+      const url = new URL(location.href);
+      url.searchParams.delete('preset');
+      history.replaceState(null, '', url);
+    }
+    renderPresets();
+    return;
+  }
+  selectPreset(name);
 });
 
 // Timeline. Only the temporal view has an axis where "before this month" means
@@ -624,6 +747,10 @@ function setTimelineVisible(on) {
     galaxy.setCutoff(null);
   }
 }
+
+renderPresets();
+const wanted = new URLSearchParams(location.search).get('preset');
+if (wanted) selectPreset(wanted);
 
 document.querySelector('#views').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-view]');
