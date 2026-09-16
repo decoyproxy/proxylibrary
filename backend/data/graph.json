@@ -1,0 +1,756 @@
+{
+  "nodes": [
+    {
+      "id": "PRJ_UMWELT",
+      "title": "UMWELT",
+      "type": "Project",
+      "importance": 5,
+      "domain": "Art",
+      "date": "2026-01-10",
+      "coordinates": {
+        "semantic": {
+          "x": 77.3,
+          "y": -4.7,
+          "z": -41.7
+        },
+        "ontological": {
+          "x": 40.0,
+          "y": 90.0,
+          "z": 0.0
+        },
+        "temporal": {
+          "x": 92,
+          "y": 44,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "PRJ_DECOY",
+      "title": "Decoy Proxy",
+      "type": "Project",
+      "importance": 4,
+      "domain": "Art",
+      "date": "2025-06-02",
+      "coordinates": {
+        "semantic": {
+          "x": -34.4,
+          "y": -47.7,
+          "z": -50.8
+        },
+        "ontological": {
+          "x": 53.6,
+          "y": 90.0,
+          "z": 6.6
+        },
+        "temporal": {
+          "x": -6,
+          "y": 22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "CON_NONHUMAN",
+      "title": "Non-human perception",
+      "type": "Concept",
+      "importance": 5,
+      "domain": "Philosophy",
+      "date": "2025-08-14",
+      "coordinates": {
+        "semantic": {
+          "x": 90.4,
+          "y": -1.5,
+          "z": -34.1
+        },
+        "ontological": {
+          "x": -27.8,
+          "y": 30.0,
+          "z": 28.8
+        },
+        "temporal": {
+          "x": 22,
+          "y": 44,
+          "z": 0
+        }
+      }
+    },
+    {
+      "id": "CON_MATERIALITY",
+      "title": "Materiality of photography",
+      "type": "Concept",
+      "importance": 5,
+      "domain": "Art",
+      "date": "2025-09-01",
+      "coordinates": {
+        "semantic": {
+          "x": -84.5,
+          "y": -24.6,
+          "z": 40.3
+        },
+        "ontological": {
+          "x": 37.3,
+          "y": 30.0,
+          "z": 14.3
+        },
+        "temporal": {
+          "x": 36,
+          "y": 44,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "CON_UEXKULL",
+      "title": "Umwelt (von Uexkull)",
+      "type": "Concept",
+      "importance": 4,
+      "domain": "Philosophy",
+      "date": "2025-08-20",
+      "coordinates": {
+        "semantic": {
+          "x": 45.4,
+          "y": 4.3,
+          "z": -22.2
+        },
+        "ontological": {
+          "x": -45.8,
+          "y": 30.0,
+          "z": 28.6
+        },
+        "temporal": {
+          "x": 22,
+          "y": 22,
+          "z": 0
+        }
+      }
+    },
+    {
+      "id": "CON_MACHINE_VISION",
+      "title": "Machine vision",
+      "type": "Concept",
+      "importance": 4,
+      "domain": "Science",
+      "date": "2025-10-05",
+      "coordinates": {
+        "semantic": {
+          "x": 12.3,
+          "y": 45.5,
+          "z": 74.6
+        },
+        "ontological": {
+          "x": 4.7,
+          "y": 30.0,
+          "z": -53.8
+        },
+        "temporal": {
+          "x": 50,
+          "y": 22,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "CON_INDEXICALITY",
+      "title": "Indexicality",
+      "type": "Concept",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2025-09-18",
+      "coordinates": {
+        "semantic": {
+          "x": -43.9,
+          "y": -35.7,
+          "z": 55.9
+        },
+        "ontological": {
+          "x": 50.5,
+          "y": 30.0,
+          "z": 45.5
+        },
+        "temporal": {
+          "x": 36,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "CON_LATENT",
+      "title": "Latent space",
+      "type": "Concept",
+      "importance": 3,
+      "domain": "Science",
+      "date": "2025-11-11",
+      "coordinates": {
+        "semantic": {
+          "x": 20.3,
+          "y": 51.7,
+          "z": 52.1
+        },
+        "ontological": {
+          "x": 22.1,
+          "y": 30.0,
+          "z": -64.3
+        },
+        "temporal": {
+          "x": 64,
+          "y": 0,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "SRC_2026_001",
+      "title": "Non-Human Perception Paper",
+      "type": "Source",
+      "importance": 5,
+      "domain": "Science",
+      "date": "2026-01-04",
+      "coordinates": {
+        "semantic": {
+          "x": 93.8,
+          "y": 11.5,
+          "z": -51.2
+        },
+        "ontological": {
+          "x": 17.5,
+          "y": -30.0,
+          "z": -36.0
+        },
+        "temporal": {
+          "x": 92,
+          "y": 44,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "SRC_UEXKULL_BOOK",
+      "title": "A Foray into the Worlds of Animals and Humans",
+      "type": "Source",
+      "importance": 4,
+      "domain": "Philosophy",
+      "date": "2025-08-19",
+      "coordinates": {
+        "semantic": {
+          "x": 49.0,
+          "y": 38.1,
+          "z": -24.6
+        },
+        "ontological": {
+          "x": -53.9,
+          "y": -30.0,
+          "z": -2.8
+        },
+        "temporal": {
+          "x": 22,
+          "y": 22,
+          "z": 0
+        }
+      }
+    },
+    {
+      "id": "SRC_FLUSSER",
+      "title": "Towards a Philosophy of Photography",
+      "type": "Source",
+      "importance": 4,
+      "domain": "Philosophy",
+      "date": "2025-09-02",
+      "coordinates": {
+        "semantic": {
+          "x": -44.0,
+          "y": 1.9,
+          "z": 41.9
+        },
+        "ontological": {
+          "x": -53.2,
+          "y": -30.0,
+          "z": -9.4
+        },
+        "temporal": {
+          "x": 36,
+          "y": 22,
+          "z": 0
+        }
+      }
+    },
+    {
+      "id": "SRC_PAGLEN",
+      "title": "Trevor Paglen - Invisible Images",
+      "type": "Source",
+      "importance": 4,
+      "domain": "Art",
+      "date": "2025-10-07",
+      "coordinates": {
+        "semantic": {
+          "x": 34.6,
+          "y": 53.7,
+          "z": 72.7
+        },
+        "ontological": {
+          "x": 12.1,
+          "y": -30.0,
+          "z": 52.6
+        },
+        "temporal": {
+          "x": 50,
+          "y": 22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "SRC_CLIP",
+      "title": "Learning Transferable Visual Models (CLIP)",
+      "type": "Source",
+      "importance": 3,
+      "domain": "Science",
+      "date": "2025-11-09",
+      "coordinates": {
+        "semantic": {
+          "x": 27.1,
+          "y": 66.2,
+          "z": 88.8
+        },
+        "ontological": {
+          "x": 55.0,
+          "y": -30.0,
+          "z": -40.0
+        },
+        "temporal": {
+          "x": 64,
+          "y": 0,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "SRC_PHOTOBOOK_A",
+      "title": "Photobook reference: Provoke",
+      "type": "Source",
+      "importance": 2,
+      "domain": "Art",
+      "date": "2025-07-21",
+      "coordinates": {
+        "semantic": {
+          "x": -56.0,
+          "y": 0.6,
+          "z": 16.4
+        },
+        "ontological": {
+          "x": -1.4,
+          "y": -30.0,
+          "z": 82.0
+        },
+        "temporal": {
+          "x": 8,
+          "y": -22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "FRG_TICK",
+      "title": "Note: the tick only senses three things",
+      "type": "Fragment",
+      "importance": 3,
+      "domain": "Philosophy",
+      "date": "2025-08-21",
+      "coordinates": {
+        "semantic": {
+          "x": 55.9,
+          "y": 9.0,
+          "z": -51.9
+        },
+        "ontological": {
+          "x": -53.6,
+          "y": -70.0,
+          "z": -41.9
+        },
+        "temporal": {
+          "x": 22,
+          "y": 0,
+          "z": 0
+        }
+      }
+    },
+    {
+      "id": "FRG_CAMERA_EYE",
+      "title": "Dump: camera is not an eye",
+      "type": "Fragment",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2025-09-03",
+      "coordinates": {
+        "semantic": {
+          "x": -73.9,
+          "y": -30.7,
+          "z": 28.5
+        },
+        "ontological": {
+          "x": -17.6,
+          "y": -70.0,
+          "z": 65.7
+        },
+        "temporal": {
+          "x": 36,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "FRG_AI_CHAT_01",
+      "title": "AI chat log: what does a sensor want",
+      "type": "Fragment",
+      "importance": 2,
+      "domain": "Science",
+      "date": "2025-10-12",
+      "coordinates": {
+        "semantic": {
+          "x": 17.1,
+          "y": 53.0,
+          "z": 63.2
+        },
+        "ontological": {
+          "x": 81.2,
+          "y": -70.0,
+          "z": -11.4
+        },
+        "temporal": {
+          "x": 50,
+          "y": -22,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "FRG_STUDIO_01",
+      "title": "Studio note: darkroom smell as data",
+      "type": "Fragment",
+      "importance": 2,
+      "domain": "Art",
+      "date": "2025-09-25",
+      "coordinates": {
+        "semantic": {
+          "x": -75.1,
+          "y": -22.1,
+          "z": 62.7
+        },
+        "ontological": {
+          "x": -39.8,
+          "y": -70.0,
+          "z": 71.7
+        },
+        "temporal": {
+          "x": 36,
+          "y": -22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "FRG_WALK_01",
+      "title": "KakaoTalk dump: night walk, IR trail cam",
+      "type": "Fragment",
+      "importance": 2,
+      "domain": "Art",
+      "date": "2025-12-02",
+      "coordinates": {
+        "semantic": {
+          "x": 77.7,
+          "y": 25.7,
+          "z": -47.1
+        },
+        "ontological": {
+          "x": -48.2,
+          "y": -70.0,
+          "z": 66.3
+        },
+        "temporal": {
+          "x": 78,
+          "y": -22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "AST_RAW_0431",
+      "title": "RAW_0431.ARW - forest IR plate",
+      "type": "Asset",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2025-12-03",
+      "coordinates": {
+        "semantic": {
+          "x": 81.9,
+          "y": 2.5,
+          "z": -36.3
+        },
+        "ontological": {
+          "x": -46.4,
+          "y": -110.0,
+          "z": 49.7
+        },
+        "temporal": {
+          "x": 78,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "AST_RAW_0522",
+      "title": "RAW_0522.ARW - lens flare study",
+      "type": "Asset",
+      "importance": 2,
+      "domain": "Art",
+      "date": "2025-12-09",
+      "coordinates": {
+        "semantic": {
+          "x": -34.5,
+          "y": -2.7,
+          "z": 43.0
+        },
+        "ontological": {
+          "x": -62.8,
+          "y": -110.0,
+          "z": 52.7
+        },
+        "temporal": {
+          "x": 78,
+          "y": -22,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "AST_SCRIPT_EMB",
+      "title": "embed_gallery.py",
+      "type": "Asset",
+      "importance": 3,
+      "domain": "Science",
+      "date": "2026-01-08",
+      "coordinates": {
+        "semantic": {
+          "x": 19.6,
+          "y": 77.8,
+          "z": 84.4
+        },
+        "ontological": {
+          "x": 60.6,
+          "y": -110.0,
+          "z": 30.9
+        },
+        "temporal": {
+          "x": 92,
+          "y": 0,
+          "z": 55
+        }
+      }
+    },
+    {
+      "id": "AST_VIDEO_01",
+      "title": "umwelt_test_render.mp4",
+      "type": "Asset",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2026-01-12",
+      "coordinates": {
+        "semantic": {
+          "x": 55.9,
+          "y": -4.3,
+          "z": -39.6
+        },
+        "ontological": {
+          "x": -61.1,
+          "y": -110.0,
+          "z": 29.8
+        },
+        "temporal": {
+          "x": 92,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "AST_PRINT_01",
+      "title": "Print test - platinum palladium",
+      "type": "Asset",
+      "importance": 2,
+      "domain": "Art",
+      "date": "2026-02-01",
+      "coordinates": {
+        "semantic": {
+          "x": -72.1,
+          "y": -25.0,
+          "z": 63.0
+        },
+        "ontological": {
+          "x": -77.5,
+          "y": -110.0,
+          "z": 26.7
+        },
+        "temporal": {
+          "x": 106,
+          "y": -22,
+          "z": -55
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "SRC_2026_001",
+      "target": "FRG_TICK",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_UEXKULL_BOOK",
+      "target": "FRG_TICK",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_FLUSSER",
+      "target": "FRG_CAMERA_EYE",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_PAGLEN",
+      "target": "FRG_AI_CHAT_01",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_CLIP",
+      "target": "FRG_AI_CHAT_01",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_PHOTOBOOK_A",
+      "target": "FRG_STUDIO_01",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_2026_001",
+      "target": "FRG_WALK_01",
+      "type": "SPARK"
+    },
+    {
+      "source": "SRC_2026_001",
+      "target": "CON_NONHUMAN",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "SRC_UEXKULL_BOOK",
+      "target": "CON_UEXKULL",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "SRC_FLUSSER",
+      "target": "CON_MATERIALITY",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "SRC_FLUSSER",
+      "target": "CON_INDEXICALITY",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "SRC_PAGLEN",
+      "target": "CON_MACHINE_VISION",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "SRC_CLIP",
+      "target": "CON_LATENT",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "FRG_AI_CHAT_01",
+      "target": "CON_MACHINE_VISION",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "CON_UEXKULL",
+      "target": "CON_NONHUMAN",
+      "type": "RESEARCH"
+    },
+    {
+      "source": "CON_NONHUMAN",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "CON_UEXKULL",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "CON_MACHINE_VISION",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "FRG_TICK",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "FRG_WALK_01",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "AST_RAW_0431",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "AST_VIDEO_01",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "AST_SCRIPT_EMB",
+      "target": "PRJ_UMWELT",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "CON_MATERIALITY",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "CON_INDEXICALITY",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "FRG_CAMERA_EYE",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "FRG_STUDIO_01",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "AST_PRINT_01",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "AST_RAW_0522",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    },
+    {
+      "source": "CON_LATENT",
+      "target": "PRJ_DECOY",
+      "type": "ASSEMBLE"
+    }
+  ]
+}

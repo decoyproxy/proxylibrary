@@ -1,0 +1,60 @@
+:root {
+  --bg: #05060a;
+  --fg: #e8e8ef;
+  --dim: #8a8aa0;
+  --line: #2a2a3a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 ui-monospace, "SF Mono", Menlo, monospace;
+  overflow: hidden;
+}
+#galaxy { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#hud {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  pointer-events: none;
+}
+#hud h1 { margin: 0; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; }
+#views { display: flex; gap: 6px; pointer-events: auto; }
+#views button {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+}
+#views button:hover { color: var(--fg); }
+#views button.active { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+#inspector {
+  position: fixed;
+  right: 16px; top: 60px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: rgba(5, 6, 10, 0.86);
+  backdrop-filter: blur(6px);
+}
+#inspector h2 { margin: 0 0 8px; font-size: 14px; }
+#inspector dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+#inspector dt { color: var(--dim); }
+#inspector dd { margin: 0; }
+#inspector ul { margin: 12px 0 0; padding-left: 16px; color: var(--dim); }
+#status { position: fixed; left: 16px; bottom: 12px; margin: 0; color: var(--dim); }
+.label {
+  color: var(--dim);
+  font: 11px ui-monospace, Menlo, monospace;
+  pointer-events: none;
+  text-shadow: 0 0 6px #000;
+  white-space: nowrap;
+}
