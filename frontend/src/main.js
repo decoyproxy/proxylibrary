@@ -778,6 +778,7 @@ function currentState() {
     domains: domainBar.values(),
     relations: relationBar.values(),
     tags: [...picked],
+    searchOnly: searchOnly(),
     month: months[Number(scrub.value)] ?? null,
   };
 }
@@ -792,6 +793,9 @@ function applyState(state) {
     for (const tag of state.tags) picked.add(tag);
     refreshTags();
     galaxy.setTags(picked);
+  }
+  if (state.searchOnly !== undefined) {
+    document.querySelector('#search [name=only]').checked = state.searchOnly;
   }
   const index = state.month ? months.indexOf(state.month) : -1;
   if (index >= 0) {
@@ -945,11 +949,25 @@ document.querySelector('#views').addEventListener('click', (event) => {
 
 const results = document.querySelector('#results');
 
+// "results only" turns the search into a filter: the rest of the galaxy is
+// hidden rather than faded, and Export and Capture then carry the search
+// subset, because they take whatever is visible.
+function searchOnly() {
+  return document.querySelector('#search [name=only]').checked;
+}
+
 function clearSearch() {
   results.hidden = true;
   results.replaceChildren();
   galaxy.highlight(null);
 }
+
+// Toggling the checkbox re-applies the search that is already on screen.
+document.querySelector('#search [name=only]').addEventListener('change', () => {
+  const shown = [...results.querySelectorAll('li:not(.heading)')].length;
+  if (!shown) return;
+  document.querySelector('#search').requestSubmit();
+});
 
 document.querySelector('#search').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -976,7 +994,8 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
     return clearSearch();
   }
 
-  galaxy.highlight(new Set(found.map((r) => r.id)));
+  const matched = new Set(found.map((r) => r.id));
+  galaxy.highlight(matched, { only: searchOnly() });
   galaxy.focus(found[0].id);
   showNode(graph, graph.nodes.find((n) => n.id === found[0].id));
   const row = (r) => {

@@ -583,3 +583,14 @@ body {
 @media (max-width: 720px) {
   #bulk { bottom: auto; top: 8px; width: calc(100vw - 32px); justify-content: center; }
 }
+
+#search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#search .only {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+#search .only input { accent-color: var(--fg); }

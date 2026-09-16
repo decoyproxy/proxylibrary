@@ -341,14 +341,17 @@ export function createGalaxy(canvas, graph, onSelect) {
   });
 
 
-  // Search highlight: dim everything that did not match. null clears it.
-  function highlight(ids) {
+  // Search results. `dim` keeps the rest of the galaxy visible but faded, so a
+  // search reads as "these ones, in context"; `only` makes the search a filter
+  // like the others, which is what the export follows. null clears it.
+  function highlight(ids, { only = false } = {}) {
     for (const [id, mesh] of byId) {
-      const dim = ids !== null && !ids.has(id);
-      mesh.material.opacity = dim ? 0.12 : 1;
-      mesh.userData.dimmed = dim;
+      const missed = ids !== null && !ids.has(id);
+      mesh.material.opacity = missed ? 0.12 : 1;
+      mesh.userData.dimmed = missed;
+      mesh.userData.searchOn = !only || !missed;
     }
-    placeLabels();
+    applyVisibility();
   }
 
   // A node written while the galaxy is open: it starts at nothing, in the place
@@ -476,14 +479,15 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
-  // Four independent filters decide what is drawn — type, domain, tags and the
-  // timeline — so none may write mesh.visible directly or the last one to run
-  // would undo the others.
+  // Five independent filters decide what is drawn — type, domain, tags, search
+  // and the timeline — so none may write mesh.visible directly or the last one
+  // to run would undo the others.
   function applyVisibility() {
     for (const mesh of byId.values()) {
       const visible = mesh.userData.typeOn !== false &&
         mesh.userData.domainOn !== false &&
         mesh.userData.tagOn !== false &&
+        mesh.userData.searchOn !== false &&
         mesh.userData.timeOn !== false;
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
