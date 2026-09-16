@@ -1,6 +1,7 @@
 import { createGalaxy } from './galaxy.js';
 import { createSelection, isNodeSet } from './selection.js';
 import { createPresetManager } from './preset_manager.js';
+import { createOcrViewer } from './ocr_viewer.js';
 
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
@@ -306,6 +307,12 @@ function refreshNodeList() {
   }));
 }
 
+// What a scan says is in its sidecar rather than in the graph payload, so the
+// card asks for it separately and only once it is on screen.
+const ocrViewer = createOcrViewer({
+  onStatus: (message) => { status.textContent = message; },
+});
+
 function showNode(graph, node) {
   if (!node) {
     inspector.hidden = true;
@@ -334,6 +341,7 @@ function showNode(graph, node) {
   }
   inspector.querySelector('.v-type').textContent = node.type ?? '—';
   buildEditor(node);
+  ocrViewer.attach(node, inspector, inspector.querySelector('ul'));
 
   // Hands the file to macOS, which knows what opens a .ARW better than a
   // browser does. The server takes the node id, never a path.
