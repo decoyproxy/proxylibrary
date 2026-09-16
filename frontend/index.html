@@ -50,6 +50,13 @@
         <button type="submit">Create</button>
       </div>
     </form>
+    <div id="busy" hidden role="alertdialog" aria-live="assertive" aria-label="Working">
+      <div class="card">
+        <p class="what"></p>
+        <div class="bar"><span></span></div>
+        <p class="hint">Re-reading the library. The galaxy is locked until it is consistent again.<span class="elapsed"></span></p>
+      </div>
+    </div>
     <div id="bulk" hidden aria-label="Selected nodes">
       <span class="count"></span>
       <input class="tag" list="all-tags" placeholder="tag to add or remove" aria-label="Tag" />

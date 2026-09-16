@@ -1,6 +1,9 @@
 import os
 import subprocess
 import sys
+import threading
+from contextlib import contextmanager
+from functools import wraps
 from datetime import date as date_cls
 
 from fastapi import FastAPI, HTTPException
@@ -17,6 +20,39 @@ app = FastAPI(title="proxylibrary")
 app.add_middleware(
     CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"]
 )
+
+# One request at a time may use the models and the vector store. Overlapping
+# ingests interleave their writes and leave the store describing a library that
+# never existed — and worse, two threads running inference on MPS at once take
+# the whole process down with a Metal assertion (seen: two bulk edits fired
+# together killed the server mid-embed). FastAPI runs these endpoints in a
+# threadpool, so "at once" is the normal case, not a rare one. The browser locks
+# its own UI while a rebuild runs, but another tab, a curl or watch.py are not
+# covered by that.
+_models = threading.Lock()
+INGEST_WAIT = float(os.environ.get("INGEST_WAIT", 180))
+
+
+def serialized(handler):
+    """Run this handler with the models and the vector store to itself."""
+
+    @wraps(handler)
+    def waits_its_turn(*args, **kwargs):
+        with rebuilding():
+            return handler(*args, **kwargs)
+
+    return waits_its_turn
+
+
+@contextmanager
+def rebuilding():
+    if not _models.acquire(timeout=INGEST_WAIT):
+        raise HTTPException(503, "the library is still rebuilding — try again in a moment")
+    try:
+        yield
+    finally:
+        _models.release()
+
 
 # The library folder is served read-only so the frontend can show thumbnails.
 if ingest.LIBRARY.is_dir():
@@ -151,6 +187,7 @@ def regraph(written, node_id):
 
 
 @app.post("/api/v1/nodes/{node_id}/links")
+@serialized
 def add_link(node_id: str, link: Link):
     """Write the relation into the note as `- [RELATION] [[target]]`."""
     source = library_file(node_id)
@@ -162,6 +199,7 @@ def add_link(node_id: str, link: Link):
 
 
 @app.delete("/api/v1/nodes/{node_id}/links/{target}")
+@serialized
 def remove_link(node_id: str, target: str):
     """Remove a link that sits on a line of its own; leave prose alone."""
     written = ingest.drop_link(library_file(node_id), target)
@@ -203,6 +241,7 @@ class NewNode(BaseModel):
 
 
 @app.post("/api/v1/nodes", status_code=201)
+@serialized
 def create_node(new: NewNode):
     """Write a new note to the library and let the ingest place it.
 
@@ -263,6 +302,7 @@ def whole_graph(extra):
 
 
 @app.patch("/api/v1/nodes")
+@serialized
 def edit_many(edit: BulkEdit):
     if not (edit.domain or edit.add_tags or edit.remove_tags):
         raise HTTPException(400, "nothing to change")
@@ -288,6 +328,7 @@ def edit_many(edit: BulkEdit):
 
 
 @app.delete("/api/v1/nodes")
+@serialized
 def delete_many(bulk: Bulk):
     trashed = []
     for node_id in bulk.ids:
@@ -304,6 +345,7 @@ def list_trash():
 
 
 @app.post("/api/v1/trash/restore/{batch}")
+@serialized
 def restore_trash(batch: str):
     """Put a deleted node's files back and re-ingest it into the graph."""
     try:
@@ -331,6 +373,7 @@ def clear_trash():
 
 
 @app.delete("/api/v1/nodes/{node_id}")
+@serialized
 def delete_node(node_id: str):
     """Move the node's files to the trash and rebuild the graph without it.
 
@@ -354,6 +397,7 @@ def delete_node(node_id: str):
 
 
 @app.patch("/api/v1/nodes/{node_id}")
+@serialized
 def edit_node(node_id: str, edit: Edit):
     """Write the change back to the file, then re-ingest and return the node.
 
@@ -403,19 +447,22 @@ def search_images(q, limit):
 
 
 @app.get("/api/v1/search")
+@serialized
 def search(q: str, limit: int = 8):
     """Semantic search over the vectors the last ingest stored. No re-embedding of the corpus."""
     collection = library()
     if not q.strip():
         return {"query": q, "results": []}
-    # First call loads the embedding model (a few seconds); later ones reuse it.
+    # Searching runs the same models an ingest does, so it waits its turn rather
+    # than racing one. First call loads the model; later ones reuse it.
     found = collection.query(
         query_embeddings=ingest.embed([q], prefix=QUERY_PREFIX),
         n_results=min(limit, max(collection.count(), 1)),
     )
+    images = search_images(q, limit)
     return {
         "query": q,
-        "images": search_images(q, limit),
+        "images": images,
         "results": [
             {"id": nid, "title": meta.get("title", nid), "type": meta.get("type"),
              "score": round(1 - distance, 3)}

@@ -3,11 +3,43 @@ import { createGalaxy } from './galaxy.js';
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
 
+// Every write re-embeds and re-projects the library, which takes long enough
+// that a click landing mid-rebuild is a real possibility rather than a thought
+// experiment. The overlay covers the canvas and the cards, so nothing can be
+// selected, edited or deleted against a graph that is being replaced. The bar
+// does not pretend to know a percentage — one ingest reports no progress — it
+// says what is happening and how long it has been.
+const busy = document.querySelector('#busy');
+let busyDepth = 0;
+
+async function working(message, task) {
+  busy.querySelector('.what').textContent = message;
+  const started = Date.now();
+  const elapsed = busy.querySelector('.elapsed');
+  const tick = setInterval(() => {
+    elapsed.textContent = ` ${Math.round((Date.now() - started) / 1000)}s`;
+  }, 1000);
+  elapsed.textContent = '';
+  busyDepth += 1;
+  busy.hidden = false;
+  try {
+    return await task();
+  } finally {
+    clearInterval(tick);
+    busyDepth -= 1;
+    if (busyDepth === 0) busy.hidden = true;
+  }
+}
+
 const DOMAINS = ['Art', 'Science', 'Philosophy'];
 
 // Writes go to the file first and the graph is rebuilt from it, so the card
 // shows what is actually on disk rather than what was typed into it.
 async function saveNode(node, changes) {
+  return working(`Saving ${node.id}`, () => saveNodeNow(node, changes));
+}
+
+async function saveNodeNow(node, changes) {
   status.textContent = `Saving ${node.id}…`;
   const res = await fetch(`/api/v1/nodes/${encodeURIComponent(node.id)}`, {
     method: 'PATCH',
@@ -111,6 +143,10 @@ function buildEditor(node) {
 // Link changes come back with the whole graph: an edge belongs to two nodes, so
 // there is no patching one node's copy of it.
 async function changeLinks(node, request) {
+  return working(`Rewiring ${node.id}`, () => changeLinksNow(node, request));
+}
+
+async function changeLinksNow(node, request) {
   status.textContent = `Rewiring ${node.id}…`;
   const res = await fetch(request.url, request.init);
   const body = await res.text();
@@ -140,6 +176,10 @@ async function deleteNode(node) {
     'it back is a single mv. Links to it from other notes stay as written.';
   if (!confirm(warning)) return;
 
+  return working(`Deleting ${node.id}`, () => deleteNodeNow(node));
+}
+
+async function deleteNodeNow(node) {
   status.textContent = `Deleting ${node.id}…`;
   const res = await fetch(`/api/v1/nodes/${encodeURIComponent(node.id)}`, { method: 'DELETE' });
   const body = await res.text();
@@ -526,7 +566,7 @@ composer.addEventListener('submit', async (event) => {
   if (!title) return;
   status.textContent = `Writing "${title}"…`;
 
-  const res = await fetch('/api/v1/nodes', {
+  const res = await working(`Writing "${title}"`, () => fetch('/api/v1/nodes', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -535,7 +575,7 @@ composer.addEventListener('submit', async (event) => {
       body: form.get('body'),
       tags: form.get('tags').split(',').map((tag) => tag.trim()).filter(Boolean),
     }),
-  });
+  }));
   const payload = await res.text();
   let parsed = payload;
   try {
@@ -615,6 +655,10 @@ galaxy.onSelectionChange((nodes) => {
 });
 
 async function bulk(url, method, body, describe) {
+  return working(describe, () => bulkNow(url, method, body, describe));
+}
+
+async function bulkNow(url, method, body, describe) {
   status.textContent = `${describe}…`;
   const res = await fetch(url, {
     method,
@@ -703,8 +747,8 @@ function renderTrash(entries) {
       const button = event.currentTarget;
       button.disabled = true;
       button.textContent = 'Restoring…';
-      const res = await fetch(`/api/v1/trash/restore/${encodeURIComponent(entry.batch)}`,
-        { method: 'POST' });
+      const res = await working(`Restoring ${entry.id}`, () =>
+        fetch(`/api/v1/trash/restore/${encodeURIComponent(entry.batch)}`, { method: 'POST' }));
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         status.textContent = `Restore failed (${res.status}): ${String(payload.detail ?? '').slice(0, 140)}`;
