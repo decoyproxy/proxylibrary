@@ -17,11 +17,16 @@ A file's id is its stem. Optional front matter overrides the defaults:
     date: 2025-08-14
     ---
 
-PDFs are read with PyMuPDF and embedded like any other text. Images get their
-galaxy position from their metadata text, not from CLIP: CLIP image vectors and
-the text model's vectors live in different spaces, and projecting both through
-one UMAP would place images by coincidence. Their CLIP vectors go to a separate
-collection instead, which /api/v1/search queries for image hits.
+PDFs are read with PyMuPDF and embedded like any other text.
+
+Galaxy positions come from a joint space: every node gets a text-model vector
+AND a CLIP vector (images through CLIP's image encoder, documents through its
+text encoder), the two are normalised, weighted by CLIP_MIX and concatenated,
+and UMAP runs on that. So photographs cluster with the photographs they look
+like and with the writing whose imagery matches them, while text-to-text
+distances still come from the text model, which reads long documents far better
+than CLIP's 77-token encoder. Search keeps the raw CLIP vectors in their own
+collection, since scores from two spaces cannot be compared.
 
 Edges come from [[wiki-links]] in the body; the edge type is derived from what
 the link points AT (-> Project = ASSEMBLE, -> Concept = RESEARCH, else SPARK).
@@ -51,6 +56,8 @@ PDF_SUFFIXES = {".pdf"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 PDF_PAGES = int(os.environ.get("PDF_PAGES", 20))  # enough to characterise a paper
 PDF_CHARS = 20000
+CLIP_MIX = float(os.environ.get("CLIP_MIX", 0.4))  # CLIP's share of the joint space
+CLIP_TEXT_CHARS = 300  # CLIP's text encoder truncates at 77 tokens anyway
 CLIP_MODEL = os.environ.get("CLIP_MODEL", "ViT-B-32")
 CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion2b_s34b_b79k")
 TYPES = ("Project", "Concept", "Source", "Fragment", "Asset")
@@ -219,6 +226,43 @@ def embed_images(paths):
     return vectors.cpu().tolist()
 
 
+def embed_clip_texts(texts):
+    """Documents entering CLIP space, so images and writing share coordinates."""
+    import torch
+
+    model, _, tokenizer, device = clip()
+    tokens = tokenizer([t[:CLIP_TEXT_CHARS] for t in texts]).to(device)
+    with torch.no_grad():
+        vectors = model.encode_text(tokens)
+        vectors /= vectors.norm(dim=-1, keepdim=True)
+    return vectors.cpu().tolist()
+
+
+def clip_vectors(nodes, texts):
+    """One CLIP vector per node: the picture itself for images, the words for the rest.
+
+    CLIP's two modalities sit in separate cones — any image is closer to any
+    other image (~0.9) than to the text describing it (~0.2), which would make
+    the pictures one island in the galaxy no matter what they show. Centring
+    each modality on its own mean removes that offset, so an image's distance to
+    a document reflects what they have in common rather than which encoder
+    produced it.
+    """
+    import numpy as np
+
+    vectors = np.asarray(embed_clip_texts(texts), dtype="float32")
+    is_image = np.array([n.get("media") == "image" for n in nodes])
+    if is_image.any():
+        vectors[is_image] = embed_images(
+            [LIBRARY / n["path"] for n, image in zip(nodes, is_image) if image]
+        )
+        for group in (is_image, ~is_image):
+            if group.any():
+                vectors[group] -= vectors[group].mean(axis=0)
+        vectors /= np.maximum(np.linalg.norm(vectors, axis=1, keepdims=True), 1e-9)
+    return vectors.tolist()
+
+
 def embed_image_query(text):
     """Encode a text query into CLIP space so it can be matched against images."""
     import torch
@@ -251,7 +295,7 @@ def build(found):
     indexed_images = store_images(nodes)
     if indexed_images:
         print(f"indexed {indexed_images} images in CLIP space", flush=True)
-    semantic = coords.semantic(vectors)
+    semantic = coords.semantic(coords.join(vectors, clip_vectors(nodes, texts), CLIP_MIX))
 
     by_id = {n["id"]: n for n in nodes}
     edges, seen = [], set()

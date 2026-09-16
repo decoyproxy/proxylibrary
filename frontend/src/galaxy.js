@@ -149,7 +149,11 @@ export function createGalaxy(canvas, graph, onSelect) {
   function frameAll(points) {
     const box = new THREE.Box3().setFromPoints(points);
     const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const distance = (sphere.radius * 1.15) / Math.sin((camera.fov * Math.PI) / 360);
+    // Fit by whichever field of view is narrower: on a tall window the
+    // horizontal one is, and fitting by height alone cuts the sides off.
+    const vertical = (camera.fov * Math.PI) / 180;
+    const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * camera.aspect);
+    const distance = (sphere.radius * 1.15) / Math.sin(Math.min(vertical, horizontal) / 2);
     const direction = camera.position.clone().sub(controls.target).normalize();
     scene.fog.density = 0.7 / (distance + sphere.radius);
     controls.target.copy(sphere.center);
