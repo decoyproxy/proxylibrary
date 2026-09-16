@@ -127,7 +127,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     return mesh;
   }
 
-  for (const node of graph.nodes) {
+  function build(node) {
     const size = 1.6 + node.importance * 1.3;
     const isImage = node.media === 'image';
     const mesh = isImage ? thumbnail(node, size) : dot(node);
@@ -138,7 +138,10 @@ export function createGalaxy(canvas, graph, onSelect) {
     labelFor(mesh);
     scene.add(mesh);
     byId.set(node.id, mesh);
+    return mesh;
   }
+
+  for (const node of graph.nodes) build(node);
 
 
   const lines = new THREE.LineSegments(
@@ -255,6 +258,21 @@ export function createGalaxy(canvas, graph, onSelect) {
       mesh.userData.dimmed = dim;
     }
     placeLabels();
+  }
+
+  // A node written while the galaxy is open: it starts at nothing, in the place
+  // its own words put it, and grows in.
+  function addNode(node) {
+    if (byId.has(node.id)) return updateNode(node);
+    const mesh = build(node);
+    const spot = node.coordinates[currentView];
+    mesh.position.set(spot.x, spot.y, spot.z);
+    mesh.scale.setScalar(0.001);
+    mesh.userData.grownAt = performance.now();
+    from.set(node.id, mesh.position.clone());
+    to.set(node.id, mesh.position.clone());
+    applyVisibility();
+    return mesh;
   }
 
   // An edited node: new size, new label, and a glide to wherever the change
@@ -397,6 +415,21 @@ export function createGalaxy(canvas, graph, onSelect) {
     controls.update();
   }
 
+  let emptyDoubleClick = () => {};
+  function onEmptyDoubleClick(handler) {
+    emptyDoubleClick = handler;
+  }
+
+  canvas.addEventListener('dblclick', (event) => {
+    pointer.set(
+      (event.clientX / innerWidth) * 2 - 1,
+      -(event.clientY / innerHeight) * 2 + 1,
+    );
+    raycaster.setFromCamera(pointer, camera);
+    const visible = [...byId.values()].filter((mesh) => mesh.visible);
+    if (!raycaster.intersectObjects(visible, false).length) emptyDoubleClick();
+  });
+
   function resize() {
     const { clientWidth: w, clientHeight: h } = document.documentElement;
     camera.aspect = w / h;
@@ -435,7 +468,7 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
-    setEdges,
+    setEdges, addNode, onEmptyDoubleClick,
     typeColors: TYPE_COLOR,
   };
 }

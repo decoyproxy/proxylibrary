@@ -72,6 +72,10 @@ CLIP_TEXT_CHARS = 300  # CLIP's text encoder truncates at 77 tokens anyway
 CLIP_MODEL = os.environ.get("CLIP_MODEL", "xlm-roberta-base-ViT-B-32")
 CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion5b_s13b_b90k")
 TYPES = ("Project", "Concept", "Source", "Fragment", "Asset")
+# Id prefixes, matching the seed corpus. Not to be confused with PREFIX, which
+# is what the embedding model wants in front of a document.
+ID_PREFIX = {"Project": "PRJ", "Concept": "CON", "Source": "SRC",
+             "Fragment": "FRG", "Asset": "AST"}
 EDGE_BY_TARGET = {"Project": "ASSEMBLE", "Concept": "RESEARCH"}
 
 FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
@@ -210,6 +214,29 @@ def drop_link(path, target):
         return None
     write_atomic(file, "\n".join(kept) + "\n")
     return file
+
+
+def new_note(node_type, title, body="", tags=(), today=None):
+    """Create a note and return its path. The id follows the seed corpus:
+    FRG_2026_001, numbered per type and year so two notes made the same day
+    cannot collide."""
+    day = today or date_cls.today()
+    folder = LIBRARY / f"{node_type}s"
+    folder.mkdir(parents=True, exist_ok=True)
+    stem = f"{ID_PREFIX[node_type]}_{day.year}"
+    taken = {path.stem for path in folder.glob(f"{stem}_*")}
+    number = 1
+    while f"{stem}_{number:03d}" in taken:
+        number += 1
+    path = folder / f"{stem}_{number:03d}.md"
+    if path.exists():  # a file we do not treat as a node, but the name is taken
+        raise FileExistsError(path)
+
+    front = {"title": title, "importance": 3, "domain": "Art", "date": day.isoformat(),
+             "tags": ", ".join(tags)}
+    block = "\n".join(f"{key}: {value}" for key, value in front.items())
+    write_atomic(path, f"---\n{block}\n---\n\n{body.strip()}\n")
+    return path
 
 
 def write_meta(path, updates):

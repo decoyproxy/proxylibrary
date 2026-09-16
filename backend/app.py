@@ -174,6 +174,52 @@ def remove_link(node_id: str, target: str):
     return regraph(written, node_id)
 
 
+class NewNode(BaseModel):
+    """A note made from the galaxy rather than from the Finder."""
+
+    type: str
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=20000)
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("type")
+    @classmethod
+    def known_type(cls, value):
+        if value not in ingest.TYPES:
+            raise ValueError(f"type must be one of {', '.join(ingest.TYPES)}")
+        return value
+
+    @field_validator("title")
+    @classmethod
+    def single_line(cls, value):
+        if "\n" in value or not value.strip():
+            raise ValueError("title must be a single non-empty line")
+        return value.strip()
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, values):
+        return Edit.clean_tags(values)
+
+
+@app.post("/api/v1/nodes", status_code=201)
+def create_node(new: NewNode):
+    """Write a new note to the library and let the ingest place it.
+
+    Its position comes from what it says, like every other node — there is no
+    way to put a node somewhere in the galaxy, only to write something that
+    belongs there.
+    """
+    try:
+        written = ingest.new_note(new.type, new.title, new.body, new.tags)
+    except FileExistsError as clash:
+        raise HTTPException(409, f"{clash} already exists") from None
+    graph = regraph(written, written.stem)
+    if not graph["node"]:
+        raise HTTPException(500, f"{written.stem} did not come back from the ingest")
+    return graph
+
+
 @app.patch("/api/v1/nodes/{node_id}")
 def edit_node(node_id: str, edit: Edit):
     """Write the change back to the file, then re-ingest and return the node.

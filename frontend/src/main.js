@@ -418,6 +418,81 @@ const refreshDomains = filterBar(
   (shown) => galaxy.setDomains(shown),
 );
 
+// Writing a note from inside the galaxy. The node's position is not the click
+// position — it comes from the text, like every other node — so the form does
+// not pretend otherwise.
+const composer = document.querySelector('#composer');
+const NODE_TYPES = ['Fragment', 'Concept', 'Source', 'Project', 'Asset'];
+
+for (const type of NODE_TYPES) {
+  const option = document.createElement('option');
+  option.value = option.textContent = type;
+  composer.type.append(option);
+}
+
+function openComposer() {
+  composer.hidden = false;
+  composer.title.focus();
+}
+
+function closeComposer() {
+  composer.reset();
+  composer.hidden = true;
+}
+
+document.querySelector('#new-node').addEventListener('click', openComposer);
+composer.querySelector('.cancel').addEventListener('click', closeComposer);
+galaxy.onEmptyDoubleClick(openComposer);
+addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !composer.hidden) closeComposer();
+});
+
+composer.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(composer);
+  const title = form.get('title').trim();
+  if (!title) return;
+  status.textContent = `Writing "${title}"…`;
+
+  const res = await fetch('/api/v1/nodes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: form.get('type'),
+      title,
+      body: form.get('body'),
+      tags: form.get('tags').split(',').map((tag) => tag.trim()).filter(Boolean),
+    }),
+  });
+  const payload = await res.text();
+  let parsed = payload;
+  try {
+    parsed = JSON.parse(payload);
+  } catch {}
+  if (!res.ok) {
+    status.textContent = `Could not write it (${res.status}): ${String(parsed?.detail ?? parsed).slice(0, 140)}`;
+    return;
+  }
+
+  graph.nodes.forEach((existing) => {
+    const fresh = parsed.nodes.find((n) => n.id === existing.id);
+    if (fresh) Object.assign(existing, fresh);
+  });
+  graph.nodes.push(parsed.node);
+  graph.edges = parsed.edges;
+  galaxy.addNode(parsed.node);
+  galaxy.setEdges(graph.edges);
+  refreshTypes();
+  refreshDomains();
+  refreshTags();
+  refreshTagList();
+  refreshNodeList();
+  closeComposer();
+  galaxy.focus(parsed.node.id);
+  showNode(graph, parsed.node);
+  status.textContent = `Wrote ${parsed.wrote}`;
+});
+
 // Timeline. Only the temporal view has an axis where "before this month" means
 // anything, so the scrubber appears with it and releases the graph when you
 // leave.

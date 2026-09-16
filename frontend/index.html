@@ -10,6 +10,7 @@
     <canvas id="galaxy"></canvas>
     <header id="hud">
       <h1>proxylibrary</h1>
+      <button type="button" id="new-node" title="Write a new note (or double-click empty space)">+ New</button>
       <nav id="views">
         <button data-view="semantic" class="active">Semantic</button>
         <button data-view="ontological">Ontological</button>
@@ -29,6 +30,18 @@
       </div>
     </header>
     <aside id="inspector" hidden></aside>
+    <form id="composer" hidden>
+      <h2>New note</h2>
+      <label>type <select name="type"></select></label>
+      <label>title <input name="title" required maxlength="200" /></label>
+      <label>tags <input name="tags" list="all-tags" placeholder="comma, separated" /></label>
+      <label>note <textarea name="body" rows="5" placeholder="[[links]] to other notes work here"></textarea></label>
+      <p class="hint">Where it lands is decided by what it says, like every other node.</p>
+      <div class="actions">
+        <button type="button" class="cancel">Cancel</button>
+        <button type="submit">Create</button>
+      </div>
+    </form>
     <datalist id="all-tags"></datalist>
     <datalist id="all-nodes"></datalist>
     <p id="status">loading…</p>
