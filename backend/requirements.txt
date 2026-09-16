@@ -4,3 +4,7 @@ uvicorn[standard]
 sentence-transformers
 chromadb
 umap-learn
+# Phase 3 — multi-format ingest
+pymupdf         # PDF text
+open_clip_torch # image vectors (separate space from the text model)
+watchdog        # re-ingest on file changes

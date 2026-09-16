@@ -22,7 +22,8 @@ cd frontend && npm install && npm run dev
 
 ## 내 자료 넣기
 
-`backend/data/library/` 아래에 타입별 폴더를 두고 마크다운을 넣는다.
+`backend/data/library/` 아래에 타입별 폴더를 두고 자료를 넣는다.
+`.md` `.txt` `.json` `.pdf` `.jpg` `.png`를 읽는다.
 (다른 폴더를 쓰려면 `LIBRARY_DIR=/path/to/내리서치폴더`.)
 
 ```
@@ -51,6 +52,21 @@ cd backend && .venv/bin/python ingest.py
 임베딩 → ChromaDB 저장 → UMAP 3D 투영까지 로컬에서 돌고 `data/graph.json`을 새로 쓴다.
 첫 실행은 모델(약 1GB)을 받느라 느리다.
 
+손으로 돌리기 싫으면 감시 프로세스를 띄운다. 파일을 저장하고 3초 조용하면 알아서 재인제스트한다.
+
+```bash
+cd backend && .venv/bin/python watch.py
+```
+
+**PDF**는 PyMuPDF로 앞 20쪽 텍스트를 뽑아 다른 문서와 똑같이 임베딩한다
+(스캔본은 텍스트가 없어 비어서 들어간다 — OCR은 아직 없다).
+
+**이미지**는 갤럭시 좌표를 메타데이터 텍스트에서 얻는다. CLIP 이미지 벡터와 텍스트
+모델 벡터는 서로 다른 공간이라 한 UMAP에 같이 넣으면 우연으로 자리가 정해지기 때문이다.
+대신 CLIP 벡터는 별도 컬렉션(`images`)에 들어가고, 검색이 이쪽을 따로 질의해
+"dark night sky with stars" 같은 말로 사진을 찾을 수 있다. 두 점수는 척도가 다르므로
+결과 목록에서 분리해 보여준다.
+
 ## 구조
 
 ```
@@ -60,6 +76,7 @@ backend/
   coords.py   3개 뷰의 좌표 규칙. seed와 ingest가 공유한다.
   ingest.py   실제 파일 → 임베딩 → ChromaDB → UMAP → graph.json.
   seed.py     시드 코퍼스. graph.json(더미 좌표) + library/*.md를 같이 찍어낸다.
+  watch.py    library 감시 → 조용해지면 재인제스트. 별도 프로세스.
 frontend/
   src/galaxy.js  Three.js 씬, 뷰 전환 보간, 노드 피킹.
   src/main.js    데이터 fetch, HUD, 인스펙터.
@@ -76,7 +93,8 @@ Animals and Humans*가 잡힌다. 결과는 갤럭시에서 밝게 남고 나머
 ## API 계약
 
 `GET /api/v1/nodes` → `{ "nodes": [...], "edges": [...] }`
-`GET /api/v1/search?q=…&limit=8` → `{ "query": …, "results": [{id, title, type, score}] }`
+`GET /api/v1/search?q=…&limit=8` → `{ "query": …, "results": [...], "images": [...] }`
+`GET /media/<path>` → library 안의 원본 파일 (썸네일용, 읽기 전용)
 (인덱스가 없으면 503 — `ingest.py`를 먼저 돌려라.)
 
 노드는 반드시 `coordinates.semantic / .ontological / .temporal` 3종을 모두 갖는다
@@ -88,7 +106,8 @@ Animals and Humans*가 잡힌다. 결과는 갤럭시에서 밝게 남고 나머
 - **Phase 1 — 완료.** 시드 데이터 + API + 3D 갤럭시 + 뷰 전환 + 인스펙터.
 - **Phase 2 — 완료.** 마크다운 인제스트, 로컬 임베딩, ChromaDB, UMAP 3D 투영.
 - **Phase 2.5 — 완료.** ChromaDB 의미 검색 + HUD 검색창, 결과 하이라이트.
-- **Phase 3 — 멀티포맷.** PyMuPDF(PDF 텍스트), OpenCLIP(이미지), Watchdog(폴더 감시 자동 재인덱싱).
+- **Phase 3 — 완료.** PDF 텍스트(PyMuPDF), 이미지 CLIP 인덱스, Watchdog 자동 재인제스트.
+- **다음 후보.** 스캔 PDF OCR, 이미지 노드 갤럭시 썸네일, 증분 인제스트(지금은 매번 전체 재계산).
 
 ### 스펙에서 벗어난 것 하나
 

@@ -25,6 +25,13 @@ function showNode(graph, node) {
       <dt>file</dt><dd class="v-path"></dd>
     </dl>
     <ul></ul>`;
+  if (node.media === 'image') {
+    const img = document.createElement('img');
+    img.src = `/media/${node.path}`;
+    img.alt = node.title;
+    img.className = 'thumb';
+    inspector.querySelector('h2').after(img);
+  }
   inspector.querySelector('h2').textContent = node.title;
   for (const key of ['type', 'domain', 'importance', 'date', 'path']) {
     inspector.querySelector(`.v-${key}`).textContent = node[key] ?? '—';
@@ -79,7 +86,7 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
     status.textContent = `search failed: ${(await res.json()).detail ?? res.status}`;
     return;
   }
-  const found = (await res.json()).results;
+  const { results: found, images = [] } = await res.json();
   if (!found.length) {
     status.textContent = `"${query}" — 결과 없음`;
     return clearSearch();
@@ -88,7 +95,7 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
   galaxy.highlight(new Set(found.map((r) => r.id)));
   galaxy.focus(found[0].id);
   showNode(graph, graph.nodes.find((n) => n.id === found[0].id));
-  results.replaceChildren(...found.map((r) => {
+  const row = (r) => {
     const li = document.createElement('li');
     li.innerHTML = '<span class="title"></span><span class="score"></span>';
     li.querySelector('.title').textContent = r.title;
@@ -98,7 +105,15 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
       showNode(graph, graph.nodes.find((n) => n.id === r.id));
     });
     return li;
-  }));
+  };
+  const rows = found.map(row);
+  if (images.length) {
+    const heading = document.createElement('li');
+    heading.className = 'heading';
+    heading.textContent = '이미지 (CLIP — 위 점수와 다른 척도)';
+    rows.push(heading, ...images.map(row));
+  }
+  results.replaceChildren(...rows);
   results.hidden = false;
   status.textContent = `"${query}" — ${found.length}개 (Esc로 해제)`;
 });

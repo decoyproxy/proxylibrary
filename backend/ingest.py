@@ -17,6 +17,12 @@ A file's id is its stem. Optional front matter overrides the defaults:
     date: 2025-08-14
     ---
 
+PDFs are read with PyMuPDF and embedded like any other text. Images get their
+galaxy position from their metadata text, not from CLIP: CLIP image vectors and
+the text model's vectors live in different spaces, and projecting both through
+one UMAP would place images by coincidence. Their CLIP vectors go to a separate
+collection instead, which /api/v1/search queries for image hits.
+
 Edges come from [[wiki-links]] in the body; the edge type is derived from what
 the link points AT (-> Project = ASSEMBLE, -> Concept = RESEARCH, else SPARK).
 
@@ -41,6 +47,12 @@ CHROMA = DATA / "chroma"
 MODEL = os.environ.get("EMBED_MODEL", "intfloat/multilingual-e5-base")
 PREFIX = os.environ.get("EMBED_PREFIX", "passage: ")
 TEXT_SUFFIXES = {".md", ".txt", ".json"}
+PDF_SUFFIXES = {".pdf"}
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
+PDF_PAGES = int(os.environ.get("PDF_PAGES", 20))  # enough to characterise a paper
+PDF_CHARS = 20000
+CLIP_MODEL = os.environ.get("CLIP_MODEL", "ViT-B-32")
+CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion2b_s34b_b79k")
 TYPES = ("Project", "Concept", "Source", "Fragment", "Asset")
 EDGE_BY_TARGET = {"Project": "ASSEMBLE", "Concept": "RESEARCH"}
 
@@ -54,9 +66,30 @@ def node_type(folder_name):
     return name if name in TYPES else None
 
 
+def read_pdf(path):
+    """First PDF_PAGES pages of text. Scanned PDFs yield nothing — that needs OCR."""
+    import pymupdf
+
+    with pymupdf.open(path) as doc:
+        pages = [page.get_text() for page in list(doc)[:PDF_PAGES]]
+    return "\n".join(pages)[:PDF_CHARS]
+
+
+def media_kind(path):
+    suffix = path.suffix.lower()
+    if suffix in IMAGE_SUFFIXES:
+        return "image"
+    if suffix in PDF_SUFFIXES:
+        return "pdf"
+    return "text" if suffix in TEXT_SUFFIXES else None
+
+
 def parse(path):
     """-> (meta dict, body text). Flat `key: value` front matter only."""
-    raw = path.read_text(encoding="utf-8", errors="replace") if path.suffix in TEXT_SUFFIXES else ""
+    kind = media_kind(path)
+    if kind == "pdf":
+        return {}, read_pdf(path)
+    raw = path.read_text(encoding="utf-8", errors="replace") if kind == "text" else ""
     meta, body = {}, raw
     match = FRONT_MATTER.match(raw)
     if match:
@@ -76,7 +109,7 @@ def collect():
         if not ntype:
             continue
         for path in sorted(folder.rglob("*")):
-            if not path.is_file() or path.name.startswith("."):
+            if not path.is_file() or path.name.startswith(".") or not media_kind(path):
                 continue
             meta, body = parse(path)
             try:
@@ -91,6 +124,7 @@ def collect():
                 "domain": meta.get("domain", "Art"),
                 "date": meta.get("date", date_cls.fromtimestamp(path.stat().st_mtime).isoformat()),
                 "path": str(path.relative_to(LIBRARY)),
+                "media": media_kind(path),
                 "links": WIKI_LINK.findall(body),
             }
             found.append((node, f"{node['title']}\n\n{body}".strip() or node["title"]))
@@ -119,11 +153,19 @@ def embed(texts, prefix=PREFIX):
     ).tolist()
 
 
+# Both collections hold normalised vectors, so cosine distance makes a search
+# score of `1 - distance` mean what it looks like. Chroma's default is L2, and
+# the space is fixed when a collection is created — delete data/chroma to change it.
+COSINE = {"hnsw:space": "cosine"}
+
+
 def collection():
     """The embedded ChromaDB collection written by the last ingest."""
     import chromadb
 
-    return chromadb.PersistentClient(path=str(CHROMA)).get_or_create_collection("library")
+    return chromadb.PersistentClient(path=str(CHROMA)).get_or_create_collection(
+        "library", metadata=COSINE
+    )
 
 
 def store_vectors(nodes, texts, vectors):
@@ -137,10 +179,78 @@ def store_vectors(nodes, texts, vectors):
     )
 
 
+_clip = None
+
+
+def clip():
+    """OpenCLIP model, preprocessing transform and tokenizer, loaded once."""
+    global _clip
+    if _clip is None:
+        import open_clip
+        import torch
+
+        device = "mps" if torch.backends.mps.is_available() else "cpu"
+        model, _, preprocess = open_clip.create_model_and_transforms(
+            CLIP_MODEL, pretrained=CLIP_WEIGHTS, device=device
+        )
+        model.eval()
+        _clip = (model, preprocess, open_clip.get_tokenizer(CLIP_MODEL), device)
+    return _clip
+
+
+def clip_collection():
+    """Image vectors live apart from the text ones — different vector space."""
+    import chromadb
+
+    return chromadb.PersistentClient(path=str(CHROMA)).get_or_create_collection(
+        "images", metadata=COSINE
+    )
+
+
+def embed_images(paths):
+    from PIL import Image
+    import torch
+
+    model, preprocess, _, device = clip()
+    batch = torch.stack([preprocess(Image.open(p).convert("RGB")) for p in paths]).to(device)
+    with torch.no_grad():
+        vectors = model.encode_image(batch)
+        vectors /= vectors.norm(dim=-1, keepdim=True)
+    return vectors.cpu().tolist()
+
+
+def embed_image_query(text):
+    """Encode a text query into CLIP space so it can be matched against images."""
+    import torch
+
+    model, _, tokenizer, device = clip()
+    with torch.no_grad():
+        vector = model.encode_text(tokenizer([text]).to(device))
+        vector /= vector.norm(dim=-1, keepdim=True)
+    return vector.cpu().tolist()
+
+
+def store_images(nodes):
+    """Index every image node in CLIP space. Returns how many were stored."""
+    images = [n for n in nodes if n.get("media") == "image"]
+    if not images:
+        return 0
+    paths = [LIBRARY / n["path"] for n in images]
+    clip_collection().upsert(
+        ids=[n["id"] for n in images],
+        embeddings=embed_images(paths),
+        metadatas=[{"title": n["title"], "type": n["type"], "path": n["path"]} for n in images],
+    )
+    return len(images)
+
+
 def build(found):
     nodes, texts = [n for n, _ in found], [t for _, t in found]
     vectors = embed(texts)
     store_vectors(nodes, texts, vectors)
+    indexed_images = store_images(nodes)
+    if indexed_images:
+        print(f"indexed {indexed_images} images in CLIP space", flush=True)
     semantic = coords.semantic(vectors)
 
     by_id = {n["id"]: n for n in nodes}
@@ -177,7 +287,7 @@ def main():
     graph = build(found)
     out = DATA / "graph.json"
     out.write_text(json.dumps(graph, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"wrote {out} ({len(graph['nodes'])} nodes, {len(graph['edges'])} edges)")
+    print(f"wrote {out} ({len(graph['nodes'])} nodes, {len(graph['edges'])} edges)", flush=True)
 
 
 if __name__ == "__main__":

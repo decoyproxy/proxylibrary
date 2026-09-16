@@ -1,6 +1,60 @@
 {
   "nodes": [
     {
+      "id": "AST_FOREST_PLATE",
+      "title": "AST_FOREST_PLATE",
+      "type": "Asset",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2026-09-16",
+      "path": "Assets/AST_FOREST_PLATE.jpg",
+      "media": "image",
+      "coordinates": {
+        "semantic": {
+          "x": 18.9,
+          "y": -41.7,
+          "z": -100.0
+        },
+        "ontological": {
+          "x": 68.0,
+          "y": -110.0,
+          "z": 0.0
+        },
+        "temporal": {
+          "x": 204,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
+      "id": "AST_NIGHT_SKY",
+      "title": "AST_NIGHT_SKY",
+      "type": "Asset",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2026-09-16",
+      "path": "Assets/AST_NIGHT_SKY.png",
+      "media": "image",
+      "coordinates": {
+        "semantic": {
+          "x": 41.2,
+          "y": -48.7,
+          "z": -72.0
+        },
+        "ontological": {
+          "x": 67.5,
+          "y": -110.0,
+          "z": 8.3
+        },
+        "temporal": {
+          "x": 204,
+          "y": 0,
+          "z": -55
+        }
+      }
+    },
+    {
       "id": "AST_PRINT_01",
       "title": "Print test - platinum palladium",
       "type": "Asset",
@@ -8,16 +62,17 @@
       "domain": "Art",
       "date": "2026-02-01",
       "path": "Assets/AST_PRINT_01.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -21.5,
-          "y": 35.7,
-          "z": -10.8
+          "x": -39.7,
+          "y": -9.0,
+          "z": -18.3
         },
         "ontological": {
-          "x": 82.0,
+          "x": 79.6,
           "y": -110.0,
-          "z": 0.0
+          "z": 19.8
         },
         "temporal": {
           "x": 106,
@@ -34,16 +89,17 @@
       "domain": "Art",
       "date": "2025-12-03",
       "path": "Assets/AST_RAW_0431.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -17.8,
-          "y": 21.5,
-          "z": 100.0
+          "x": -39.7,
+          "y": -100.0,
+          "z": -25.0
         },
         "ontological": {
-          "x": 67.5,
+          "x": 63.5,
           "y": -110.0,
-          "z": 8.3
+          "z": 24.4
         },
         "temporal": {
           "x": 78,
@@ -60,16 +116,17 @@
       "domain": "Art",
       "date": "2025-12-09",
       "path": "Assets/AST_RAW_0522.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -58.4,
-          "y": 36.9,
-          "z": 62.8
+          "x": -63.8,
+          "y": -61.3,
+          "z": 2.8
         },
         "ontological": {
-          "x": 79.6,
+          "x": 72.4,
           "y": -110.0,
-          "z": 19.8
+          "z": 38.5
         },
         "temporal": {
           "x": 78,
@@ -86,16 +143,17 @@
       "domain": "Science",
       "date": "2026-01-08",
       "path": "Assets/AST_SCRIPT_EMB.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 35.0,
-          "y": -25.0,
-          "z": 66.6
+          "x": -42.4,
+          "y": -2.3,
+          "z": -99.1
         },
         "ontological": {
-          "x": -10.6,
+          "x": 5.9,
           "y": -110.0,
-          "z": -67.2
+          "z": -67.7
         },
         "temporal": {
           "x": 92,
@@ -112,16 +170,17 @@
       "domain": "Art",
       "date": "2026-01-12",
       "path": "Assets/AST_VIDEO_01.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 29.6,
-          "y": 7.1,
-          "z": 31.5
+          "x": -31.8,
+          "y": -53.8,
+          "z": -72.0
         },
         "ontological": {
-          "x": 60.0,
+          "x": 50.5,
           "y": -110.0,
-          "z": 31.9
+          "z": 45.5
         },
         "temporal": {
           "x": 92,
@@ -138,16 +197,17 @@
       "domain": "Art",
       "date": "2025-09-18",
       "path": "Concepts/CON_INDEXICALITY.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 7.4,
-          "y": 4.2,
-          "z": -87.2
+          "x": 1.4,
+          "y": 29.2,
+          "z": -56.5
         },
         "ontological": {
-          "x": 55.7,
+          "x": 44.6,
           "y": 30.0,
-          "z": 39.0
+          "z": 51.3
         },
         "temporal": {
           "x": 36,
@@ -164,16 +224,17 @@
       "domain": "Science",
       "date": "2025-11-11",
       "path": "Concepts/CON_LATENT.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -23.3,
-          "y": 55.7,
-          "z": -80.9
+          "x": -61.8,
+          "y": 11.6,
+          "z": -42.7
         },
         "ontological": {
-          "x": 14.1,
+          "x": 29.8,
           "y": 30.0,
-          "z": -66.5
+          "z": -61.1
         },
         "temporal": {
           "x": 64,
@@ -190,16 +251,17 @@
       "domain": "Science",
       "date": "2025-10-05",
       "path": "Concepts/CON_MACHINE_VISION.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -19.4,
-          "y": -28.3,
-          "z": -21.7
+          "x": -12.4,
+          "y": 59.9,
+          "z": -94.4
         },
         "ontological": {
-          "x": 17.6,
+          "x": 29.4,
           "y": 30.0,
-          "z": -51.1
+          "z": -45.3
         },
         "temporal": {
           "x": 50,
@@ -216,16 +278,17 @@
       "domain": "Art",
       "date": "2025-09-01",
       "path": "Concepts/CON_MATERIALITY.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -38.6,
-          "y": -24.6,
-          "z": -100.0
+          "x": -53.6,
+          "y": 69.2,
+          "z": -44.1
         },
         "ontological": {
-          "x": 22.4,
+          "x": 13.7,
           "y": 30.0,
-          "z": 33.2
+          "z": 37.6
         },
         "temporal": {
           "x": 36,
@@ -242,16 +305,17 @@
       "domain": "Philosophy",
       "date": "2025-08-14",
       "path": "Concepts/CON_NONHUMAN.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 54.2,
-          "y": -39.7,
-          "z": -49.0
+          "x": 77.3,
+          "y": -2.0,
+          "z": -9.5
         },
         "ontological": {
-          "x": -39.9,
+          "x": -38.3,
           "y": 30.0,
-          "z": -2.1
+          "z": -11.7
         },
         "temporal": {
           "x": 22,
@@ -268,16 +332,17 @@
       "domain": "Philosophy",
       "date": "2025-08-20",
       "path": "Concepts/CON_UEXKULL.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 88.0,
-          "y": -35.6,
-          "z": 1.1
+          "x": 100.0,
+          "y": -20.1,
+          "z": -51.0
         },
         "ontological": {
-          "x": -53.2,
+          "x": -49.3,
           "y": 30.0,
-          "z": -9.4
+          "z": -22.0
         },
         "temporal": {
           "x": 22,
@@ -294,16 +359,17 @@
       "domain": "Science",
       "date": "2025-10-12",
       "path": "Fragments/FRG_AI_CHAT_01.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -100.0,
-          "y": -53.3,
-          "z": 27.9
+          "x": 1.4,
+          "y": 44.6,
+          "z": 59.8
         },
         "ontological": {
-          "x": 60.0,
+          "x": 71.7,
           "y": -70.0,
-          "z": -55.9
+          "z": -39.8
         },
         "temporal": {
           "x": 50,
@@ -320,16 +386,17 @@
       "domain": "Art",
       "date": "2025-09-03",
       "path": "Fragments/FRG_CAMERA_EYE.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 20.6,
-          "y": 85.6,
-          "z": -24.7
+          "x": 19.4,
+          "y": -47.4,
+          "z": 17.4
         },
         "ontological": {
-          "x": 7.1,
+          "x": -9.5,
           "y": -70.0,
-          "z": 67.6
+          "z": 67.3
         },
         "temporal": {
           "x": 36,
@@ -346,16 +413,17 @@
       "domain": "Art",
       "date": "2025-09-25",
       "path": "Fragments/FRG_STUDIO_01.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -33.7,
-          "y": 100.0,
-          "z": -46.0
+          "x": -23.6,
+          "y": -30.4,
+          "z": 47.4
         },
         "ontological": {
-          "x": -1.4,
+          "x": -21.2,
           "y": -70.0,
-          "z": 82.0
+          "z": 79.2
         },
         "temporal": {
           "x": 36,
@@ -372,16 +440,17 @@
       "domain": "Philosophy",
       "date": "2025-08-21",
       "path": "Fragments/FRG_TICK.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -73.7,
-          "y": 60.9,
-          "z": -36.0
+          "x": 60.0,
+          "y": -27.2,
+          "z": 53.2
         },
         "ontological": {
-          "x": -53.6,
+          "x": -41.9,
           "y": -70.0,
-          "z": -41.9
+          "z": -53.6
         },
         "temporal": {
           "x": 22,
@@ -398,16 +467,17 @@
       "domain": "Art",
       "date": "2025-12-02",
       "path": "Fragments/FRG_WALK_01.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 4.5,
-          "y": 77.2,
-          "z": 62.7
+          "x": -2.3,
+          "y": -98.4,
+          "z": 22.4
         },
         "ontological": {
-          "x": -21.2,
+          "x": -39.8,
           "y": -70.0,
-          "z": 79.2
+          "z": 71.7
         },
         "temporal": {
           "x": 78,
@@ -424,16 +494,17 @@
       "domain": "Art",
       "date": "2025-06-02",
       "path": "Projects/PRJ_DECOY.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 71.6,
-          "y": 23.7,
-          "z": -69.6
+          "x": 50.8,
+          "y": 41.2,
+          "z": -83.0
         },
         "ontological": {
-          "x": -20.2,
+          "x": -31.7,
           "y": 90.0,
-          "z": 50.1
+          "z": 43.7
         },
         "temporal": {
           "x": -6,
@@ -450,16 +521,17 @@
       "domain": "Art",
       "date": "2026-01-10",
       "path": "Projects/PRJ_UMWELT.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 100.0,
-          "y": 10.4,
-          "z": -25.5
+          "x": 82.4,
+          "y": 3.6,
+          "z": -96.2
         },
         "ontological": {
-          "x": -19.4,
+          "x": -27.3,
           "y": 90.0,
-          "z": 35.0
+          "z": 29.3
         },
         "temporal": {
           "x": 92,
@@ -476,16 +548,17 @@
       "domain": "Science",
       "date": "2026-01-04",
       "path": "Sources/SRC_2026_001.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 39.7,
-          "y": -88.1,
-          "z": 4.4
+          "x": 76.0,
+          "y": 52.6,
+          "z": -12.6
         },
         "ontological": {
-          "x": 39.8,
+          "x": 37.6,
           "y": -30.0,
-          "z": 4.2
+          "z": 13.7
         },
         "temporal": {
           "x": 92,
@@ -502,16 +575,17 @@
       "domain": "Science",
       "date": "2025-11-09",
       "path": "Sources/SRC_CLIP.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -71.4,
-          "y": -94.4,
-          "z": 38.3
+          "x": 12.9,
+          "y": 90.4,
+          "z": 23.3
         },
         "ontological": {
-          "x": 66.3,
+          "x": 60.6,
           "y": -30.0,
-          "z": 15.3
+          "z": 30.9
         },
         "temporal": {
           "x": 64,
@@ -528,16 +602,17 @@
       "domain": "Philosophy",
       "date": "2025-09-02",
       "path": "Sources/SRC_FLUSSER.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -56.1,
-          "y": -91.2,
-          "z": -50.1
+          "x": -45.4,
+          "y": 78.8,
+          "z": 12.7
         },
         "ontological": {
-          "x": -9.4,
+          "x": 3.8,
           "y": -30.0,
-          "z": -53.2
+          "z": -53.9
         },
         "temporal": {
           "x": 36,
@@ -554,16 +629,17 @@
       "domain": "Art",
       "date": "2025-10-07",
       "path": "Sources/SRC_PAGLEN.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -20.1,
-          "y": -76.9,
-          "z": 50.3
+          "x": 19.4,
+          "y": 100.0,
+          "z": -33.5
         },
         "ontological": {
-          "x": -45.3,
+          "x": -51.1,
           "y": -30.0,
-          "z": 29.4
+          "z": 17.6
         },
         "temporal": {
           "x": 50,
@@ -580,16 +656,17 @@
       "domain": "Art",
       "date": "2025-07-21",
       "path": "Sources/SRC_PHOTOBOOK_A.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -72.9,
-          "y": -22.3,
-          "z": -52.5
+          "x": -100.0,
+          "y": 35.1,
+          "z": -47.3
         },
         "ontological": {
-          "x": -73.7,
+          "x": -80.2,
           "y": -30.0,
-          "z": 35.9
+          "z": 17.0
         },
         "temporal": {
           "x": 8,
@@ -606,21 +683,49 @@
       "domain": "Philosophy",
       "date": "2025-08-19",
       "path": "Sources/SRC_UEXKULL_BOOK.md",
+      "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 14.6,
-          "y": -100.0,
-          "z": -48.5
+          "x": 82.8,
+          "y": 48.1,
+          "z": 43.7
         },
         "ontological": {
-          "x": 10.3,
+          "x": 22.8,
           "y": -30.0,
-          "z": -53.0
+          "z": -48.9
         },
         "temporal": {
           "x": 22,
           "y": 22,
           "z": 0
+        }
+      }
+    },
+    {
+      "id": "SRC_UMWELT_PDF",
+      "title": "SRC_UMWELT_PDF",
+      "type": "Source",
+      "importance": 3,
+      "domain": "Art",
+      "date": "2026-09-16",
+      "path": "Sources/SRC_UMWELT_PDF.pdf",
+      "media": "pdf",
+      "coordinates": {
+        "semantic": {
+          "x": 67.2,
+          "y": -23.2,
+          "z": 100.0
+        },
+        "ontological": {
+          "x": -68.0,
+          "y": -30.0,
+          "z": -2.4
+        },
+        "temporal": {
+          "x": 204,
+          "y": 0,
+          "z": -55
         }
       }
     }
