@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 // Saturated on white, not neon on black: these have to hold up as ink.
 const TYPE_COLOR = {
@@ -148,14 +151,28 @@ export function createGalaxy(canvas, graph, onSelect) {
   for (const node of graph.nodes) build(node);
 
 
-  const lines = new THREE.LineSegments(
-    new THREE.BufferGeometry(),
-    new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.28 }),
-  );
-  scene.add(lines);
+  // A line's thickness comes from its material, so lines of different thickness
+  // cannot share one: edges are drawn in four weight bands. WebGL's own
+  // `linewidth` is ignored on nearly every platform, which is why these are
+  // LineMaterial (screen-space quads) rather than LineBasicMaterial.
+  const BANDS = [
+    { width: 0.9, opacity: 0.18 },
+    { width: 1.7, opacity: 0.3 },
+    { width: 2.7, opacity: 0.44 },
+    { width: 3.8, opacity: 0.62 },
+  ].map((band) => {
+    const material = new LineMaterial({
+      vertexColors: true, transparent: true, worldUnits: false,
+      linewidth: band.width, opacity: band.opacity,
+    });
+    material.resolution.set(innerWidth, innerHeight);
+    const object = new LineSegments2(new LineSegmentsGeometry(), material);
+    object.frustumCulled = false; // the positions move without the bounds following
+    scene.add(object);
+    return { ...band, material, object, all: [], edges: [], positions: new Float32Array(0) };
+  });
 
   let edges = [];
-  let positions = new Float32Array(0);
   let relations = new Set(Object.keys(EDGE_COLOR));
 
   // Editing a relation changes how many segments there are, so the buffers are
@@ -163,17 +180,43 @@ export function createGalaxy(canvas, graph, onSelect) {
   // reader keeps rewiring would otherwise leak one buffer per edit.
   function setEdges(next) {
     edges = next.filter((edge) => byId.has(edge.source) && byId.has(edge.target));
-    positions = new Float32Array(edges.length * 6);
-    const colors = new Float32Array(edges.length * 6);
+
+    // Similarities occupy a narrow band of their own — 0.46 to 0.85 in this
+    // library — so they are spread across the range the edges actually use.
+    // Against an absolute 0..1 scale every line would look alike.
+    const weights = edges.map((edge) => edge.weight ?? 0.5);
+    const low = Math.min(...weights, 1);
+    const span = Math.max(Math.max(...weights, 0) - low, 1e-6);
+
+    for (const band of BANDS) band.all = [];
     edges.forEach((edge, i) => {
-      const colour = new THREE.Color(EDGE_COLOR[edge.type] ?? 0x555566);
-      for (let end = 0; end < 2; end++) colour.toArray(colors, i * 6 + end * 3);
+      const place = (weights[i] - low) / span;
+      BANDS[Math.min(Math.floor(place * BANDS.length), BANDS.length - 1)].all.push(edge);
     });
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    lines.geometry.dispose();
-    lines.geometry = geometry;
+    rebuildEdges();
+  }
+
+  // Hidden edges are left out of the geometry rather than folded to zero
+  // length. Folding was free with LineBasicMaterial, but a screen-space quad
+  // needs a direction to extrude along; a zero-length segment gives it NaNs,
+  // which LineMaterial draws as a black slab across the middle of the galaxy.
+  function rebuildEdges() {
+    for (const band of BANDS) {
+      band.edges = band.all.filter((edge) =>
+        byId.get(edge.source)?.visible && byId.get(edge.target)?.visible &&
+        relations.has(edge.type));
+      band.positions = new Float32Array(band.edges.length * 6);
+      const colours = new Float32Array(band.edges.length * 6);
+      band.edges.forEach((edge, i) => {
+        const colour = new THREE.Color(EDGE_COLOR[edge.type] ?? 0x555566);
+        for (let end = 0; end < 2; end++) colour.toArray(colours, i * 6 + end * 3);
+      });
+      band.object.geometry.dispose();
+      band.object.geometry = new LineSegmentsGeometry();
+      band.object.geometry.setPositions(band.positions);
+      band.object.geometry.setColors(colours);
+      band.object.visible = band.edges.length > 0;
+    }
     updateEdges();
   }
 
@@ -218,19 +261,18 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
 
   function updateEdges() {
-    const attribute = lines.geometry.attributes.position;
-    if (!attribute) return; // no edges yet, or none at all
-    edges.forEach((edge, i) => {
-      const from = byId.get(edge.source);
-      const to = byId.get(edge.target);
-      // A filtered-out endpoint, or a relation switched off, collapses the
-      // segment to a point: no geometry rebuild, and nothing left to draw.
-      const hidden = !from.visible || !to.visible || !relations.has(edge.type);
-      from.position.toArray(positions, i * 6);
-      (hidden ? from : to).position.toArray(positions, i * 6 + 3);
-    });
-    attribute.needsUpdate = true;
-    lines.geometry.computeBoundingSphere();
+    for (const band of BANDS) {
+      const instances = band.object.geometry.attributes.instanceStart;
+      if (!band.edges.length || !instances) continue;
+      band.edges.forEach((edge, i) => {
+        byId.get(edge.source).position.toArray(band.positions, i * 6);
+        byId.get(edge.target).position.toArray(band.positions, i * 6 + 3);
+      });
+      // Written straight into the instanced buffer: setPositions allocates new
+      // ones, and this runs on every frame of a view transition.
+      instances.data.array.set(band.positions);
+      instances.data.needsUpdate = true;
+    }
   }
 
   // Lit dots brighten; thumbnails, which are unlit, get a white tint instead.
@@ -492,7 +534,7 @@ export function createGalaxy(canvas, graph, onSelect) {
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
     }
-    updateEdges();
+    rebuildEdges();
     placeLabels();
   }
 
@@ -508,7 +550,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   // segments to zero length rather than rebuilding the geometry.
   function setRelations(kinds) {
     relations = kinds;
-    updateEdges();
+    rebuildEdges();
   }
 
   // Tag filter. Unlike the others this one starts off: an empty selection means
@@ -624,6 +666,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
     labelRenderer.setSize(w, h);
+    for (const band of BANDS) band.material.resolution.set(w, h);
   }
   addEventListener('resize', resize);
   resize();

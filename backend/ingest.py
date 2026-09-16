@@ -605,6 +605,24 @@ def layout(ids, joint, stale, refit):
     return [spots[i] if i in spots else previous[i] for i in ids]
 
 
+def weigh_edges(edges, ids, joint):
+    """Add a 0..1 `weight` to each edge: cosine similarity of its two nodes.
+
+    A link is a claim that two things belong together; the weight says how much
+    the text agrees. Negative similarities clamp to 0 — "less alike than
+    average" is still just weak.
+    """
+    import numpy as np
+
+    vectors = np.asarray(joint, dtype="float32")
+    vectors /= np.maximum(np.linalg.norm(vectors, axis=1, keepdims=True), 1e-9)
+    index = {node_id: i for i, node_id in enumerate(ids)}
+    for edge in edges:
+        a, b = index.get(edge["source"]), index.get(edge["target"])
+        similarity = float(vectors[a] @ vectors[b]) if a is not None and b is not None else 0.0
+        edge["weight"] = round(max(similarity, 0.0), 3)
+
+
 def build(found, refit=False):
     """Graph for the whole library, re-embedding only what changed.
 
@@ -665,6 +683,11 @@ def build(found, refit=False):
 
     span = (min(coords.months(n["date"]) for n in nodes),
             max(coords.months(n["date"]) for n in nodes))
+    # How alike the two ends of each edge are, so the drawing can say it. Taken
+    # from the same joint space the layout uses, which is why a strong line and
+    # a short distance agree with each other.
+    weigh_edges(edges, ids, joint)
+
     for i, node in enumerate(nodes):
         node["coordinates"] = {
             "semantic": semantic[i],

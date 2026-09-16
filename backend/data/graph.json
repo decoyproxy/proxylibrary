@@ -1001,152 +1001,182 @@
     {
       "source": "AST_PRINT_01",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.719
     },
     {
       "source": "AST_RAW_0431",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.505
     },
     {
       "source": "AST_RAW_0522",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.559
     },
     {
       "source": "AST_SCRIPT_EMB",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.554
     },
     {
       "source": "AST_VIDEO_01",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.718
     },
     {
       "source": "CON_INDEXICALITY",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.544
     },
     {
       "source": "CON_LATENT",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.555
     },
     {
       "source": "CON_MACHINE_VISION",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.456
     },
     {
       "source": "CON_MATERIALITY",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.669
     },
     {
       "source": "CON_NONHUMAN",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.623
     },
     {
       "source": "CON_UEXKULL",
       "target": "CON_NONHUMAN",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.831
     },
     {
       "source": "CON_UEXKULL",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.738
     },
     {
       "source": "FRG_AI_CHAT_01",
       "target": "CON_MACHINE_VISION",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.68
     },
     {
       "source": "FRG_CAMERA_EYE",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.531
     },
     {
       "source": "FRG_STUDIO_01",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.671
     },
     {
       "source": "FRG_TICK",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.512
     },
     {
       "source": "FRG_WALK_01",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE"
+      "type": "ASSEMBLE",
+      "weight": 0.518
     },
     {
       "source": "SRC_2026_001",
       "target": "FRG_TICK",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.562
     },
     {
       "source": "SRC_2026_001",
       "target": "FRG_WALK_01",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.49
     },
     {
       "source": "SRC_2026_001",
       "target": "CON_NONHUMAN",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.846
     },
     {
       "source": "SRC_CLIP",
       "target": "FRG_AI_CHAT_01",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.708
     },
     {
       "source": "SRC_CLIP",
       "target": "CON_LATENT",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.507
     },
     {
       "source": "SRC_FLUSSER",
       "target": "FRG_CAMERA_EYE",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.62
     },
     {
       "source": "SRC_FLUSSER",
       "target": "CON_MATERIALITY",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.696
     },
     {
       "source": "SRC_FLUSSER",
       "target": "CON_INDEXICALITY",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.52
     },
     {
       "source": "SRC_PAGLEN",
       "target": "FRG_AI_CHAT_01",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.631
     },
     {
       "source": "SRC_PAGLEN",
       "target": "CON_MACHINE_VISION",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.713
     },
     {
       "source": "SRC_PHOTOBOOK_A",
       "target": "FRG_STUDIO_01",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.483
     },
     {
       "source": "SRC_UEXKULL_BOOK",
       "target": "FRG_TICK",
-      "type": "SPARK"
+      "type": "SPARK",
+      "weight": 0.59
     },
     {
       "source": "SRC_UEXKULL_BOOK",
       "target": "CON_UEXKULL",
-      "type": "RESEARCH"
+      "type": "RESEARCH",
+      "weight": 0.696
     }
   ]
 }

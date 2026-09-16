@@ -14,6 +14,10 @@ def load():
             raise ValueError(f"{node['id']} missing coordinates: {missing}")
     ids = {n["id"] for n in graph["nodes"]}
     for edge in graph["edges"]:
+        weight = edge.get("weight")
+        if weight is not None and not 0 <= weight <= 1:
+            raise ValueError(f"edge weight out of range: {edge}")
+    for edge in graph["edges"]:
         for end in ("source", "target"):
             if edge[end] not in ids:
                 raise ValueError(f"edge references unknown node: {edge[end]}")
