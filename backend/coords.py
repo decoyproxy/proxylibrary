@@ -30,10 +30,27 @@ def ontological(index, node_type, domain, importance):
     }
 
 
-def temporal(date, domain, importance):
-    year, month = (int(p) for p in date.split("-")[:2])
+def months(date):
+    """A date as a month number, for measuring distances along the time axis."""
+    year, month = (int(part) for part in date.split("-")[:2])
+    return year * 12 + month
+
+
+def temporal(date, domain, importance, span=None):
+    """Time on x, importance on y, domain on z.
+
+    `span` is the (earliest, latest) month in the library, and the axis is
+    stretched to fit it. A fixed scale worked only while everything was dated
+    within a year or two of now: a 1968 photobook — an ordinary thing in a
+    research archive — landed 9,500 units off, and the camera then framed the
+    rest of the galaxy as a dot.
+    """
+    # With no span there is no axis to place the date on — a lone node sits at
+    # the start of its own timeline.
+    first, last = span or (months(date), months(date))
+    position = (months(date) - first) / max(last - first, 1)
     return {
-        "x": round((year * 12 + month - EPOCH) * 14 - 90, 1),
+        "x": round(position * 2 * SPAN - SPAN, 1),
         "y": round((importance - 3) * 22, 1),
         "z": round(sector(domain) * 55 - 55, 1),
     }
@@ -142,8 +159,13 @@ def demo():
     import numpy as np
 
     assert ontological(0, "Project", "Art", 5)["y"] == 90.0
-    assert temporal("2025-01-01", "Art", 3) == {"x": -76.0, "y": 0.0, "z": -55.0}
-    assert temporal("2026-01-01", "Art", 3)["x"] == 92.0  # a year later, further along x
+    span = (months("2025-01-01"), months("2026-01-01"))
+    assert temporal("2025-01-01", "Art", 3) == {"x": -100.0, "y": 0.0, "z": -55.0}
+    assert temporal("2026-01-01", "Art", 3, span)["x"] == 100.0  # last month, far end
+    assert temporal("2025-07-01", "Art", 3, span)["x"] == 0.0  # halfway
+    # A much older document stretches the axis instead of flying off it.
+    wide = (months("1968-01-01"), months("2026-01-01"))
+    assert -100.0 <= temporal("1968-11-01", "Art", 3, wide)["x"] <= 100.0
     assert len(semantic([[0.0, 1.0]] * 3)) == 3  # small-input fallback, no UMAP
     # A new node lands next to the neighbour it matches, not at the origin.
     known = [[1.0, 0.0], [0.0, 1.0]]

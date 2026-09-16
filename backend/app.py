@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from datetime import date as date_cls
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,9 +76,28 @@ class Edit(BaseModel):
     """What the inspector is allowed to change. Everything else is off limits:
     this writes to the reader's own research files."""
 
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    date: str | None = None
     importance: int | None = Field(default=None, ge=1, le=5)
     domain: str | None = None
     tags: list[str] | None = None
+
+    @field_validator("title")
+    @classmethod
+    def single_line(cls, value):
+        # Front matter is one `key: value` per line, so a newline in a title
+        # would turn the rest of it into a bogus key.
+        if "\n" in value or not value.strip():
+            raise ValueError("title must be a single non-empty line")
+        return value.strip()
+
+    @field_validator("date")
+    @classmethod
+    def real_date(cls, value):
+        try:
+            return date_cls.fromisoformat(value).isoformat()
+        except ValueError:
+            raise ValueError("date must be YYYY-MM-DD") from None
 
     @field_validator("domain")
     @classmethod

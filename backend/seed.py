@@ -113,6 +113,8 @@ CLUSTER = {
 
 def build():
     rng = random.Random(42)
+    span = (min(coords.months(d) for *_, d, _ in NODES),
+            max(coords.months(d) for *_, d, _ in NODES))
     nodes = []
     for i, (nid, title, ntype, imp, domain, date, cluster) in enumerate(NODES):
         cx, cy, cz = CLUSTER[cluster]
@@ -131,7 +133,7 @@ def build():
                     "z": round(cz + rng.uniform(-spread, spread), 1),
                 },
                 "ontological": coords.ontological(i, ntype, domain, imp),
-                "temporal": coords.temporal(date, domain, imp),
+                "temporal": coords.temporal(date, domain, imp, span),
             },
         })
     edges = [{"source": s, "target": t, "type": k} for s, t, k in EDGES]

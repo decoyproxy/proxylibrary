@@ -1,8 +1,8 @@
 ---
-title: Photobook reference: Provoke
+title: Photobook reference: Provoke (1968)
 importance: 2
 domain: Art
-date: 2025-07-21
+date: 1968-11-01
 tags: print
 ---
 

@@ -490,11 +490,13 @@ def build(found, refit=False):
                 "type": EDGE_BY_TARGET.get(by_id[target]["type"], "SPARK"),
             })
 
+    span = (min(coords.months(n["date"]) for n in nodes),
+            max(coords.months(n["date"]) for n in nodes))
     for i, node in enumerate(nodes):
         node["coordinates"] = {
             "semantic": semantic[i],
             "ontological": coords.ontological(i, node["type"], node["domain"], node["importance"]),
-            "temporal": coords.temporal(node["date"], node["domain"], node["importance"]),
+            "temporal": coords.temporal(node["date"], node["domain"], node["importance"], span),
         }
     return {"nodes": nodes, "edges": edges}
 

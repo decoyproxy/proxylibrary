@@ -290,3 +290,29 @@ body {
   border-color: var(--fg);
   color: var(--fg);
 }
+
+#inspector h2 { display: block; }
+#inspector input.title {
+  width: 100%;
+  padding: 1px 4px;
+  margin-left: -5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+}
+#inspector input.date {
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+#inspector input.title:hover,
+#inspector input.date:hover { border-color: var(--line); }
+#inspector input.title:focus,
+#inspector input.date:focus { outline: none; border-color: var(--fg); }

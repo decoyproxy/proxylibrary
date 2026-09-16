@@ -34,7 +34,27 @@ async function saveNode(node, changes) {
   return true;
 }
 
+// Commit a text-ish field on Enter or on leaving it, and only when it really
+// changed — every save rewrites the file and re-embeds the document.
+function editable(element, node, current, toChange) {
+  element.value = current;
+  const commit = () => {
+    if (element.value.trim() === String(current).trim()) return;
+    if (!element.value.trim()) {
+      element.value = current; // an empty title or date is a slip, not an edit
+      return;
+    }
+    saveNode(node, toChange(element.value));
+  };
+  element.addEventListener('keydown', (event) => event.key === 'Enter' && element.blur());
+  element.addEventListener('blur', commit);
+  if (element.type === 'date') element.addEventListener('change', commit);
+}
+
 function buildEditor(node) {
+  editable(inspector.querySelector('.title'), node, node.title, (value) => ({ title: value }));
+  editable(inspector.querySelector('.date'), node, node.date ?? '', (value) => ({ date: value }));
+
   const stars = inspector.querySelector('.stars');
   for (let value = 1; value <= 5; value++) {
     const star = document.createElement('button');
@@ -54,8 +74,8 @@ function buildEditor(node) {
   }
   domain.addEventListener('change', () => saveNode(node, { domain: domain.value }));
 
-  // Commit on Enter or on leaving the field, but only when something changed —
-  // every save rewrites the file and re-embeds the document.
+  // Tags may legitimately be cleared to nothing, so they do not go through
+  // `editable`, which treats an empty field as a slip.
   const tags = inspector.querySelector('.tags');
   const original = (node.tags ?? []).join(', ');
   tags.value = original;
@@ -80,10 +100,10 @@ function showNode(graph, node) {
       return `[${e.type}] ${other ? other.title : otherId}`;
     });
   inspector.innerHTML = `
-    <h2></h2>
+    <h2><input class="title" aria-label="Title" /></h2>
     <dl>
       <dt>type</dt><dd class="v-type"></dd>
-      <dt>date</dt><dd class="v-date"></dd>
+      <dt>date</dt><dd><input type="date" class="date" aria-label="Date" /></dd>
       <dt>file</dt><dd><button type="button" class="open" title="Open in the macOS default app"></button></dd>
       <dt>importance</dt><dd class="stars" role="group" aria-label="Importance"></dd>
       <dt>domain</dt><dd><select class="domain"></select></dd>
@@ -97,10 +117,7 @@ function showNode(graph, node) {
     img.className = 'thumb';
     inspector.querySelector('h2').after(img);
   }
-  inspector.querySelector('h2').textContent = node.title;
-  for (const key of ['type', 'date']) {
-    inspector.querySelector(`.v-${key}`).textContent = node[key] ?? '—';
-  }
+  inspector.querySelector('.v-type').textContent = node.type ?? '—';
   buildEditor(node);
 
   // Hands the file to macOS, which knows what opens a .ARW better than a
@@ -268,6 +285,7 @@ const scrub = document.querySelector('#scrub');
 const when = document.querySelector('#when');
 const play = document.querySelector('#play');
 const STEP_MS = 420;
+const PLAY_SECONDS = 20; // however wide the library's dates are, Play takes about this long
 
 // Every month between the first and the last collected, gaps included — a
 // slider that skips empty months would run at a different speed per library.
@@ -288,6 +306,9 @@ scrub.min = 0;
 scrub.max = Math.max(months.length - 1, 0);
 scrub.value = scrub.max;
 let playing = null;
+// A library spanning 1968 to now is 700 months; one month per tick would take
+// five minutes to play through.
+const stride = Math.max(1, Math.ceil(months.length / ((PLAY_SECONDS * 1000) / STEP_MS)));
 
 function showMonth(index) {
   const month = months[index];
@@ -315,7 +336,7 @@ play.addEventListener('click', () => {
   play.textContent = 'Pause';
   playing = setInterval(() => {
     if (Number(scrub.value) >= Number(scrub.max)) return stopPlaying();
-    scrub.value = Number(scrub.value) + 1;
+    scrub.value = Math.min(Number(scrub.value) + stride, Number(scrub.max));
     showMonth(Number(scrub.value));
   }, STEP_MS);
 });
