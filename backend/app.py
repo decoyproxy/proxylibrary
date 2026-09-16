@@ -14,12 +14,14 @@ from pydantic import BaseModel, Field, field_validator
 import ingest
 import hybrid_search
 import store
+from routes_nodes import router as nodes_router
 from routes_presets import router as presets_router
 from routes_validator import router as validator_router
 
 QUERY_PREFIX = os.environ.get("QUERY_PREFIX", "query: ")
 
 app = FastAPI(title="proxylibrary")
+app.include_router(nodes_router)
 app.include_router(presets_router)
 app.include_router(validator_router)
 app.add_middleware(
