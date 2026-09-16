@@ -8,3 +8,5 @@ umap-learn
 pymupdf         # PDF text
 open_clip_torch # image vectors (separate space from the text model)
 watchdog        # re-ingest on file changes
+# Phase 13 — OCR through macOS Vision (no model download, reads Korean)
+pyobjc-framework-Vision; sys_platform == "darwin"

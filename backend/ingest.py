@@ -45,6 +45,7 @@ from datetime import datetime
 from pathlib import Path
 
 import coords
+import ocr
 
 DATA = Path(__file__).parent / "data"
 LIBRARY = Path(os.environ.get("LIBRARY_DIR", DATA / "library"))
@@ -141,6 +142,25 @@ def meta_path(path):
     return path.with_name(path.name + SIDECAR)
 
 
+def transcribe(path, kind):
+    """OCR a picture into its sidecar, so the words are searchable and visible.
+
+    The text lands in the sidecar markdown rather than anywhere private: it is
+    then part of the note like any other line, editable when the machine has
+    misread something, and it reaches the embeddings through the same door as
+    everything else.
+    """
+    text = ocr.read_image(path) if kind == "image" else ocr.read_pdf(path)
+    if not text:
+        return
+    sidecar = meta_path(path)
+    existing = sidecar.read_text(encoding="utf-8") if sidecar.exists() else ""
+    merged = ocr.merge(existing, text)
+    if merged != existing:
+        write_atomic(sidecar, merged)
+        print(f"read {len(text)} characters out of {path.name}", flush=True)
+
+
 def parse(path):
     """-> (meta dict, body text) for one library file, sidecar included."""
     kind = media_kind(path)
@@ -151,6 +171,8 @@ def parse(path):
     else:
         body = ""
     meta, body = front_matter(body)
+    if ocr.needed(kind, body):
+        transcribe(path, kind)
     sidecar = meta_path(path)
     if sidecar != path and sidecar.exists():
         extra, note = front_matter(sidecar.read_text(encoding="utf-8", errors="replace"))
@@ -340,9 +362,18 @@ def write_meta(path, updates):
 
 
 def fingerprint(path):
-    """Changes whenever the file's bytes could have. Cheap: one stat call."""
-    stat = path.stat()
-    return f"{stat.st_mtime_ns}:{stat.st_size}"
+    """Changes whenever the node's text could have.
+
+    The sidecar counts: a photograph never changes, but the OCR text or the
+    notes beside it do, and a fingerprint that ignored them would keep serving
+    the vector of an empty picture.
+    """
+    parts = []
+    for file in (path, meta_path(path)):
+        if file.exists():
+            stat = file.stat()
+            parts.append(f"{stat.st_mtime_ns}:{stat.st_size}")
+    return "|".join(parts)
 
 
 def collect():
