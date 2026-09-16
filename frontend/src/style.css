@@ -533,3 +533,53 @@ body {
   padding: 10px 16px 14px;
 }
 #trash .hint { margin: 0; color: var(--dim); font-size: 11px; }
+
+.band {
+  position: fixed;
+  z-index: 4;
+  border: 1px solid var(--fg);
+  background: rgba(17, 17, 17, 0.06);
+  pointer-events: none;
+}
+
+#bulk {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--fg);
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+}
+#bulk .count { font-weight: 700; }
+#bulk input,
+#bulk select {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+#bulk input { width: 170px; }
+#bulk button {
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+#bulk button:hover { border-color: var(--fg); }
+#bulk .trash:hover { border-color: #be185d; color: #be185d; }
+@media (max-width: 720px) {
+  #bulk { bottom: auto; top: 8px; width: calc(100vw - 32px); justify-content: center; }
+}

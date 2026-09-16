@@ -597,6 +597,92 @@ document.querySelector('#capture-png').addEventListener('click', async () => {
   status.textContent = `Captured ${Math.round(blob.size / 1024)} KB`;
 });
 
+// Bulk actions. One ingest covers the whole selection — a PATCH per node would
+// re-embed the library once per node.
+const bulkBar = document.querySelector('#bulk');
+let chosenNodes = [];
+
+for (const name of DOMAINS) {
+  const option = document.createElement('option');
+  option.value = option.textContent = name;
+  bulkBar.querySelector('.domain').append(option);
+}
+
+galaxy.onSelectionChange((nodes) => {
+  chosenNodes = nodes;
+  bulkBar.hidden = nodes.length < 2; // one node is the inspector's job
+  bulkBar.querySelector('.count').textContent = `${nodes.length} selected`;
+});
+
+async function bulk(url, method, body, describe) {
+  status.textContent = `${describe}…`;
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: chosenNodes.map((node) => node.id), ...body }),
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    status.textContent = `${describe} failed (${res.status}): ${String(payload.detail ?? '').slice(0, 140)}`;
+    return null;
+  }
+
+  const gone = new Set(payload.removed ?? []);
+  for (const id of gone) await galaxy.removeNode(id);
+  graph.nodes = payload.nodes;
+  graph.edges = payload.edges;
+  for (const node of graph.nodes) if (!gone.has(node.id)) galaxy.updateNode(node);
+  galaxy.setEdges(graph.edges);
+  typeBar.refresh();
+  domainBar.refresh();
+  relationBar.refresh();
+  refreshTags();
+  refreshTagList();
+  refreshNodeList();
+  return payload;
+}
+
+bulkBar.querySelector('.add').addEventListener('click', async () => {
+  const tag = bulkBar.querySelector('.tag').value.trim();
+  if (!tag) return;
+  const done = await bulk('/api/v1/nodes', 'PATCH', { add_tags: [tag] }, `Tagging ${chosenNodes.length}`);
+  if (done) status.textContent = `Tagged ${done.changed.length} with "${tag}"`;
+});
+
+bulkBar.querySelector('.remove').addEventListener('click', async () => {
+  const tag = bulkBar.querySelector('.tag').value.trim();
+  if (!tag) return;
+  const done = await bulk('/api/v1/nodes', 'PATCH', { remove_tags: [tag] }, `Untagging ${chosenNodes.length}`);
+  if (done) status.textContent = `Removed "${tag}" from ${done.changed.length}`;
+});
+
+bulkBar.querySelector('.domain').addEventListener('change', async (event) => {
+  const domain = event.target.value;
+  if (!domain) return;
+  event.target.value = '';
+  const done = await bulk('/api/v1/nodes', 'PATCH', { domain }, `Moving ${chosenNodes.length} to ${domain}`);
+  if (done) status.textContent = `${done.changed.length} moved to ${domain}`;
+});
+
+bulkBar.querySelector('.trash').addEventListener('click', async () => {
+  const names = chosenNodes.map((node) => node.title).slice(0, 8).join('\n');
+  const more = chosenNodes.length > 8 ? `\n…and ${chosenNodes.length - 8} more` : '';
+  if (!confirm(`Delete ${chosenNodes.length} notes?\n\n${names}${more}\n\n` +
+    'Their files move to backend/data/.trash and can be restored from there.')) return;
+  const done = await bulk('/api/v1/nodes', 'DELETE', {}, `Deleting ${chosenNodes.length}`);
+  if (done) {
+    galaxy.clearSelection();
+    inspector.hidden = true;
+    status.textContent = `Moved ${done.removed.length} to the trash`;
+    if (!trashPanel.hidden) openTrash();
+  }
+});
+
+bulkBar.querySelector('.clear').addEventListener('click', () => galaxy.clearSelection());
+addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && chosenNodes.length) galaxy.clearSelection();
+});
+
 // Trash. Deleting moved files aside rather than erasing them, which is only
 // worth anything if there is a way back.
 const trashPanel = document.querySelector('#trash');

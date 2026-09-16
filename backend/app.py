@@ -220,6 +220,84 @@ def create_node(new: NewNode):
     return graph
 
 
+class BulkEdit(BaseModel):
+    """One change applied to many notes. Tags are added and removed rather than
+    replaced: the selection's notes do not share a tag list to overwrite."""
+
+    ids: list[str] = Field(min_length=1, max_length=500)
+    domain: str | None = None
+    add_tags: list[str] = Field(default_factory=list)
+    remove_tags: list[str] = Field(default_factory=list)
+
+    @field_validator("domain")
+    @classmethod
+    def known_domain(cls, value):
+        if value not in DOMAINS:
+            raise ValueError(f"domain must be one of {', '.join(DOMAINS)}")
+        return value
+
+    @field_validator("add_tags", "remove_tags")
+    @classmethod
+    def clean_tags(cls, values):
+        tags = [tag.strip() for tag in values if tag.strip()]
+        if len(tags) > 20 or any(len(tag) > 40 for tag in tags):
+            raise ValueError("at most 20 tags, 40 characters each")
+        if any("," in tag or "\n" in tag for tag in tags):
+            raise ValueError("tags cannot contain commas or newlines")
+        return tags
+
+
+class Bulk(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=500)
+
+
+def whole_graph(extra):
+    """Every bulk action rewrites many files and then ingests once — the ingest
+    is the expensive part, and doing it per file would make a selection of fifty
+    notes unusable."""
+    ingest.main()
+    graph = store.load()
+    global _collection
+    _collection = None
+    return {**extra, "nodes": graph["nodes"], "edges": graph["edges"]}
+
+
+@app.patch("/api/v1/nodes")
+def edit_many(edit: BulkEdit):
+    if not (edit.domain or edit.add_tags or edit.remove_tags):
+        raise HTTPException(400, "nothing to change")
+    known = {node["id"]: node for node in store.load()["nodes"]}
+    missing = [node_id for node_id in edit.ids if node_id not in known]
+    if missing:
+        raise HTTPException(404, f"no such nodes: {', '.join(missing[:5])}")
+
+    changed = []
+    for node_id in edit.ids:
+        node = known[node_id]
+        updates = {}
+        if edit.domain:
+            updates["domain"] = edit.domain
+        if edit.add_tags or edit.remove_tags:
+            tags = [tag for tag in node.get("tags", []) if tag not in edit.remove_tags]
+            tags += [tag for tag in edit.add_tags if tag not in tags]
+            updates["tags"] = ", ".join(tags)
+        if updates:
+            ingest.write_meta(library_file(node_id), updates)
+            changed.append(node_id)
+    return whole_graph({"changed": changed})
+
+
+@app.delete("/api/v1/nodes")
+def delete_many(bulk: Bulk):
+    trashed = []
+    for node_id in bulk.ids:
+        for path in ingest.trash(library_file(node_id)):
+            trashed.append(str(path.relative_to(ingest.DATA)))
+    if not trashed:
+        raise HTTPException(404, "nothing on disk for those nodes")
+    return whole_graph({"removed": bulk.ids, "trashed": trashed})
+
+
 @app.get("/api/v1/trash")
 def list_trash():
     return {"entries": ingest.trashed()}

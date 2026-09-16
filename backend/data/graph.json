@@ -334,9 +334,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -10.9,
-          "y": -5.5,
-          "z": -36.2
+          "x": -42.0,
+          "y": -15.7,
+          "z": -71.2
         },
         "ontological": {
           "x": 49.7,
@@ -365,9 +365,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 19.4,
-          "y": -0.2,
-          "z": 36.1
+          "x": 27.9,
+          "y": -12.0,
+          "z": 54.2
         },
         "ontological": {
           "x": 7.1,
@@ -426,9 +426,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -27.1,
-          "y": -28.3,
-          "z": -71.7
+          "x": -44.2,
+          "y": -14.1,
+          "z": -75.1
         },
         "ontological": {
           "x": 63.0,
@@ -644,9 +644,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -69.4,
-          "y": -36.7,
-          "z": -100.0
+          "x": -88.3,
+          "y": -32.4,
+          "z": -77.9
         },
         "ontological": {
           "x": -68.8,
@@ -675,9 +675,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 17.6,
-          "y": -0.5,
-          "z": 90.2
+          "x": 19.4,
+          "y": -3.0,
+          "z": 84.3
         },
         "ontological": {
           "x": 4.7,
@@ -706,9 +706,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -12.4,
-          "y": -54.8,
-          "z": 31.2
+          "x": -39.3,
+          "y": -42.5,
+          "z": 19.7
         },
         "ontological": {
           "x": -77.5,
@@ -737,9 +737,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -68.6,
-          "y": -46.9,
-          "z": -76.7
+          "x": -92.5,
+          "y": -41.3,
+          "z": -55.0
         },
         "ontological": {
           "x": -52.8,

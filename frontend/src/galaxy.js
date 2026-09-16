@@ -242,20 +242,104 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
-  let selected = null;
+  const chosen = new Set(); // every selected mesh, one or many
+  let onSelectionChange = () => {};
 
-  canvas.addEventListener('pointerdown', (event) => {
+  function selection() {
+    return [...chosen].map((mesh) => mesh.userData.node);
+  }
+
+  function choose(meshes, { add = false } = {}) {
+    if (!add) {
+      for (const mesh of chosen) setSelected(mesh, false);
+      chosen.clear();
+    }
+    for (const mesh of meshes) {
+      if (chosen.has(mesh)) {
+        chosen.delete(mesh);
+        setSelected(mesh, false);
+      } else {
+        chosen.add(mesh);
+        setSelected(mesh, true);
+      }
+    }
+    const nodes = selection();
+    onSelect(nodes.length === 1 ? nodes[0] : null);
+    onSelectionChange(nodes);
+  }
+
+  function clearSelection() {
+    choose([]);
+  }
+
+  function pick(event) {
     pointer.set(
       (event.clientX / innerWidth) * 2 - 1,
       -(event.clientY / innerHeight) * 2 + 1,
     );
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects([...byId.values()], false)[0];
-    setSelected(selected, false);
-    selected = hit?.object ?? null;
-    setSelected(selected, true);
-    onSelect(selected?.userData.node ?? null);
+    return raycaster.intersectObjects(
+      [...byId.values()].filter((mesh) => mesh.visible), false)[0]?.object ?? null;
+  }
+
+  // Shift starts a rubber band; a shift-click that never moves is a plain
+  // add-to-selection. Orbiting is suspended in between, or the camera would
+  // swing around while you are drawing the box.
+  const band = document.createElement('div');
+  band.className = 'band';
+  band.hidden = true;
+  document.body.append(band);
+  let bandStart = null;
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (event.shiftKey) {
+      bandStart = { x: event.clientX, y: event.clientY };
+      controls.enabled = false;
+      return;
+    }
+    const hit = pick(event);
+    choose(hit ? [hit] : []);
   });
+
+  addEventListener('pointermove', (event) => {
+    if (!bandStart) return;
+    const left = Math.min(bandStart.x, event.clientX);
+    const top = Math.min(bandStart.y, event.clientY);
+    band.style.left = `${left}px`;
+    band.style.top = `${top}px`;
+    band.style.width = `${Math.abs(event.clientX - bandStart.x)}px`;
+    band.style.height = `${Math.abs(event.clientY - bandStart.y)}px`;
+    band.hidden = false;
+  });
+
+  addEventListener('pointerup', (event) => {
+    if (!bandStart) return;
+    const box = {
+      left: Math.min(bandStart.x, event.clientX),
+      right: Math.max(bandStart.x, event.clientX),
+      top: Math.min(bandStart.y, event.clientY),
+      bottom: Math.max(bandStart.y, event.clientY),
+    };
+    const dragged = box.right - box.left > 4 || box.bottom - box.top > 4;
+    bandStart = null;
+    band.hidden = true;
+    controls.enabled = true;
+
+    if (!dragged) {
+      const hit = pick(event);
+      return choose(hit ? [hit] : [], { add: true });
+    }
+    const inside = [...byId.values()].filter((mesh) => {
+      if (!mesh.visible) return false;
+      const point = mesh.position.clone().project(camera);
+      if (point.z > 1) return false;
+      const x = (point.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+      const y = (-point.y * 0.5 + 0.5) * renderer.domElement.clientHeight;
+      return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
+    });
+    choose(inside, { add: true });
+  });
+
 
   // Search highlight: dim everything that did not match. null clears it.
   function highlight(ids) {
@@ -345,6 +429,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     if (!mesh) return Promise.resolve();
     byId.delete(id);
     labelled.delete(mesh);
+    chosen.delete(mesh);
     const index = billboards.indexOf(mesh);
     if (index >= 0) billboards.splice(index, 1);
     from.delete(id);
@@ -568,7 +653,8 @@ export function createGalaxy(canvas, graph, onSelect) {
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
     setEdges, addNode, removeNode, onEmptyDoubleClick, setRelations,
-    visibleGraph, capture,
+    visibleGraph, capture, selection, clearSelection,
+    onSelectionChange: (handler) => { onSelectionChange = handler; },
     relationColors: EDGE_COLOR,
     typeColors: TYPE_COLOR,
   };

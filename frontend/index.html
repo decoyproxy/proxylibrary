@@ -49,6 +49,15 @@
         <button type="submit">Create</button>
       </div>
     </form>
+    <div id="bulk" hidden aria-label="Selected nodes">
+      <span class="count"></span>
+      <input class="tag" list="all-tags" placeholder="tag to add or remove" aria-label="Tag" />
+      <button type="button" class="add">Add</button>
+      <button type="button" class="remove">Remove</button>
+      <select class="domain" aria-label="Set domain"><option value="">set domain…</option></select>
+      <button type="button" class="trash">Delete</button>
+      <button type="button" class="clear">Clear</button>
+    </div>
     <section id="trash" hidden aria-label="Trash">
       <header><h2>Trash</h2><button type="button" class="close" aria-label="Close">×</button></header>
       <ul></ul>
