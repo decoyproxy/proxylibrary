@@ -1,2 +1,6 @@
 fastapi
 uvicorn[standard]
+# Phase 2 — local embeddings, vector store, 3D projection. No paid APIs.
+sentence-transformers
+chromadb
+umap-learn

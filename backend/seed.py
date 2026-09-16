@@ -1,8 +1,17 @@
-"""Generate data/graph.json seed. ponytail: deterministic fake coords until Phase 2 UMAP."""
+"""The seed corpus, in one place.
+
+`python seed.py` writes two things from the same list:
+  data/graph.json  - placeholder graph, so the frontend runs with no model installed
+  data/library/    - the same corpus as markdown, as input for ingest.py
+
+Real coordinates come from ingest.py; the semantic ones here are deterministic
+fakes (clustered by topic) standing in until embeddings are computed.
+"""
 import json
-import math
 import random
 from pathlib import Path
+
+import coords
 
 # (id, title, type, importance, domain, date, cluster)
 NODES = [
@@ -65,22 +74,13 @@ EDGES = [
     ("CON_LATENT", "PRJ_DECOY", "ASSEMBLE"),
 ]
 
-# Ontological view: type = vertical layer, domain = angular sector.
-LAYER = {"Project": 90.0, "Concept": 30.0, "Source": -30.0, "Fragment": -70.0, "Asset": -110.0}
-SECTOR = {"Art": 0, "Philosophy": 1, "Science": 2}
-# Semantic view: topical cluster centers.
+# Semantic view stand-in: topical cluster centers.
 CLUSTER = {
     "umwelt": (70, 20, -30),
     "photo": (-60, -10, 40),
     "machine": (10, 60, 70),
     "decoy": (-20, -60, -60),
 }
-EPOCH = 2025 * 12  # months
-
-
-def months(date):
-    y, m, _ = (int(p) for p in date.split("-"))
-    return y * 12 + m - EPOCH
 
 
 def build():
@@ -89,8 +89,6 @@ def build():
     for i, (nid, title, ntype, imp, domain, date, cluster) in enumerate(NODES):
         cx, cy, cz = CLUSTER[cluster]
         spread = 26
-        angle = (SECTOR[domain] * 120 + i * 7) * 3.14159 / 180
-        radius = 40 + (5 - imp) * 14
         nodes.append({
             "id": nid,
             "title": title,
@@ -104,23 +102,36 @@ def build():
                     "y": round(cy + rng.uniform(-spread, spread), 1),
                     "z": round(cz + rng.uniform(-spread, spread), 1),
                 },
-                "ontological": {
-                    "x": round(radius * math.cos(angle), 1),
-                    "y": LAYER[ntype],
-                    "z": round(radius * math.sin(angle), 1),
-                },
-                "temporal": {
-                    "x": round(months(date) * 14 - 90, 1),
-                    "y": round((imp - 3) * 22, 1),
-                    "z": round(SECTOR[domain] * 55 - 55, 1),
-                },
+                "ontological": coords.ontological(i, ntype, domain, imp),
+                "temporal": coords.temporal(date, domain, imp),
             },
         })
     edges = [{"source": s, "target": t, "type": k} for s, t, k in EDGES]
     return {"nodes": nodes, "edges": edges}
 
 
+def write_library(root):
+    """Emit the same corpus as markdown so ingest.py has something to chew on."""
+    links = {}
+    for source, target, _ in EDGES:
+        links.setdefault(source, []).append(target)
+    written = 0
+    for nid, title, ntype, imp, domain, date, _ in NODES:
+        folder = root / f"{ntype}s"
+        folder.mkdir(parents=True, exist_ok=True)
+        body = "\n".join(f"- [[{t}]]" for t in links.get(nid, [])) or "(no links yet)"
+        (folder / f"{nid}.md").write_text(
+            f"---\ntitle: {title}\nimportance: {imp}\ndomain: {domain}\ndate: {date}\n---\n\n"
+            f"# {title}\n\n{body}\n",
+            encoding="utf-8",
+        )
+        written += 1
+    return written
+
+
 if __name__ == "__main__":
-    out = Path(__file__).parent / "data" / "graph.json"
+    data = Path(__file__).parent / "data"
+    out = data / "graph.json"
     out.write_text(json.dumps(build(), indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"wrote {out} ({len(NODES)} nodes, {len(EDGES)} edges)")
+    print(f"wrote {write_library(data / 'library')} markdown files to {data / 'library'}")

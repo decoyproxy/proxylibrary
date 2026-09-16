@@ -22,10 +22,11 @@ function showNode(graph, node) {
       <dt>domain</dt><dd class="v-domain"></dd>
       <dt>importance</dt><dd class="v-importance"></dd>
       <dt>date</dt><dd class="v-date"></dd>
+      <dt>file</dt><dd class="v-path"></dd>
     </dl>
     <ul></ul>`;
   inspector.querySelector('h2').textContent = node.title;
-  for (const key of ['type', 'domain', 'importance', 'date']) {
+  for (const key of ['type', 'domain', 'importance', 'date', 'path']) {
     inspector.querySelector(`.v-${key}`).textContent = node[key] ?? '—';
   }
   const list = inspector.querySelector('ul');
