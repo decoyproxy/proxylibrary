@@ -152,6 +152,7 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   let edges = [];
   let positions = new Float32Array(0);
+  let relations = new Set(Object.keys(EDGE_COLOR));
 
   // Editing a relation changes how many segments there are, so the buffers are
   // rebuilt rather than rewritten. The old geometry is disposed — a galaxy the
@@ -213,16 +214,18 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
 
   function updateEdges() {
+    const attribute = lines.geometry.attributes.position;
+    if (!attribute) return; // no edges yet, or none at all
     edges.forEach((edge, i) => {
       const from = byId.get(edge.source);
       const to = byId.get(edge.target);
-      // A filtered-out endpoint collapses the segment to a point: no geometry
-      // rebuild, and nothing left to draw.
-      const hidden = !from.visible || !to.visible;
+      // A filtered-out endpoint, or a relation switched off, collapses the
+      // segment to a point: no geometry rebuild, and nothing left to draw.
+      const hidden = !from.visible || !to.visible || !relations.has(edge.type);
       from.position.toArray(positions, i * 6);
       (hidden ? from : to).position.toArray(positions, i * 6 + 3);
     });
-    lines.geometry.attributes.position.needsUpdate = true;
+    attribute.needsUpdate = true;
     lines.geometry.computeBoundingSphere();
   }
 
@@ -321,6 +324,13 @@ export function createGalaxy(canvas, graph, onSelect) {
       mesh.userData.typeOn = types.has(mesh.userData.node.type);
     }
     applyVisibility();
+  }
+
+  // Relation filter. Edges live in one buffer, so hiding a kind folds those
+  // segments to zero length rather than rebuilding the geometry.
+  function setRelations(kinds) {
+    relations = kinds;
+    updateEdges();
   }
 
   // Tag filter. Unlike the others this one starts off: an empty selection means
@@ -463,12 +473,13 @@ export function createGalaxy(canvas, graph, onSelect) {
     labelRenderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
+  setEdges(graph.edges); // before the first frame: the loop updates this geometry
   requestAnimationFrame(frame);
-  setEdges(graph.edges);
 
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
-    setEdges, addNode, onEmptyDoubleClick,
+    setEdges, addNode, onEmptyDoubleClick, setRelations,
+    relationColors: EDGE_COLOR,
     typeColors: TYPE_COLOR,
   };
 }

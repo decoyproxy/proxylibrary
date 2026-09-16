@@ -108,8 +108,6 @@ function buildEditor(node) {
   tags.addEventListener('blur', add);
 }
 
-const RELATIONS = ['SPARK', 'RESEARCH', 'ASSEMBLE'];
-
 // Link changes come back with the whole graph: an edge belongs to two nodes, so
 // there is no patching one node's copy of it.
 async function changeLinks(node, request) {
@@ -131,6 +129,7 @@ async function changeLinks(node, request) {
   graph.edges = payload.edges;
   galaxy.setEdges(graph.edges);
   galaxy.updateNode(node);
+  refreshRelations();
   showNode(graph, node);
   status.textContent = `Saved to ${payload.wrote}`;
 }
@@ -289,14 +288,25 @@ const galaxy = createGalaxy(
 galaxy.setView('semantic');
 status.textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges · drag to orbit, click a node`;
 
+const RELATIONS = ['SPARK', 'RESEARCH', 'ASSEMBLE'];
+
 // Filter bars. Type and domain work the same way, so they are the same code:
 // one toggle per value actually present, with its count.
 const TYPE_ORDER = ['Project', 'Concept', 'Source', 'Fragment', 'Asset'];
 const DOMAIN_ORDER = ['Art', 'Science', 'Philosophy'];
 
+// `keyOf` reads a node's value for this bar; pass null for a bar over edges
+// (relations), which are counted instead of nodes.
 function filterBar(nav, keyOf, order, colourOf, apply) {
-  const values = [...new Set([...order, ...graph.nodes.map(keyOf)])]
-    .filter((value) => graph.nodes.some((node) => keyOf(node) === value));
+  const count = keyOf
+    ? (value) => graph.nodes.filter((node) => keyOf(node) === value).length
+    : (value) => graph.edges.filter((edge) => edge.type === value).length;
+  const values = order.filter((value) => count(value) > 0);
+  if (keyOf) {
+    for (const node of graph.nodes) {
+      if (!values.includes(keyOf(node))) values.push(keyOf(node));
+    }
+  }
   const shown = new Set(values);
 
   for (const value of values) {
@@ -315,8 +325,7 @@ function filterBar(nav, keyOf, order, colourOf, apply) {
   // Counts follow the graph, which an inspector edit can change.
   function refresh() {
     for (const button of nav.children) {
-      button.querySelector('.count').textContent =
-        graph.nodes.filter((node) => keyOf(node) === button.dataset.value).length;
+      button.querySelector('.count').textContent = count(button.dataset.value);
     }
   }
 
@@ -410,6 +419,14 @@ refreshTags();
 refreshTagList();
 refreshNodeList();
 
+const refreshRelations = filterBar(
+  document.querySelector('#relations'),
+  null,
+  RELATIONS,
+  (relation) => `#${(galaxy.relationColors[relation] ?? 0).toString(16).padStart(6, '0')}`,
+  (shown) => galaxy.setRelations(shown),
+);
+
 const refreshDomains = filterBar(
   document.querySelector('#domains'),
   (node) => node.domain,
@@ -484,6 +501,7 @@ composer.addEventListener('submit', async (event) => {
   galaxy.setEdges(graph.edges);
   refreshTypes();
   refreshDomains();
+  refreshRelations();
   refreshTags();
   refreshTagList();
   refreshNodeList();

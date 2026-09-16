@@ -117,14 +117,18 @@ body {
 }
 
 #types,
-#domains {
+#domains,
+#relations {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   pointer-events: auto;
 }
 #types button,
-#domains button {
+#domains button,
+#relations button {
+  font-size: 11px;
+  letter-spacing: 0.04em;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -137,7 +141,8 @@ body {
   font: inherit;
 }
 #types button .swatch,
-#domains button .swatch {
+#domains button .swatch,
+#relations button .swatch {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -145,10 +150,13 @@ body {
   opacity: 0.25;
 }
 #types button[aria-pressed='true'],
+#relations button[aria-pressed='true'],
 #domains button[aria-pressed='true'] { color: var(--fg); border-color: var(--fg); }
-#types button[aria-pressed='true'] .swatch { opacity: 1; }
+#types button[aria-pressed='true'] .swatch,
+#relations button[aria-pressed='true'] .swatch { opacity: 1; }
 #domains button[aria-pressed='true'] { background: var(--fg); color: var(--bg); }
 #types .count,
+#relations .count,
 #domains .count { color: var(--dim); font-variant-numeric: tabular-nums; }
 #domains button[aria-pressed='true'] .count { color: var(--bg); opacity: 0.7; }
 
