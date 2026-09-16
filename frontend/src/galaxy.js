@@ -29,7 +29,11 @@ export function createGalaxy(canvas, graph, onSelect) {
   const camera = new THREE.PerspectiveCamera(55, 1, 1, 4000);
   camera.position.set(180, 120, 240);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  // preserveDrawingBuffer keeps the frame readable after it is composited,
+  // which is what makes Capture able to hand back a PNG at all.
+  const renderer = new THREE.WebGLRenderer({
+    canvas, antialias: true, preserveDrawingBuffer: true,
+  });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
   const labelRenderer = new CSS2DRenderer();
@@ -278,6 +282,62 @@ export function createGalaxy(canvas, graph, onSelect) {
     return mesh;
   }
 
+  // What is on screen right now, as data. The filters are the point of the
+  // export: a view worth keeping is usually a subset.
+  function visibleGraph() {
+    const nodes = [...byId.values()].filter((mesh) => mesh.visible);
+    const shown = new Set(nodes.map((mesh) => mesh.userData.node.id));
+    return {
+      view: currentView,
+      nodes: nodes.map((mesh) => ({
+        ...mesh.userData.node,
+        position: mesh.position.toArray().map((value) => Math.round(value * 10) / 10),
+      })),
+      edges: edges.filter((edge) =>
+        shown.has(edge.source) && shown.has(edge.target) && relations.has(edge.type)),
+    };
+  }
+
+  // The galaxy as a picture. Labels are DOM elements, so they are drawn onto a
+  // 2D canvas over the rendered frame — a capture without them would be a field
+  // of dots nobody can read.
+  function capture(scale = 2) {
+    const width = renderer.domElement.clientWidth;
+    const height = renderer.domElement.clientHeight;
+    const previous = renderer.getPixelRatio();
+    renderer.setPixelRatio(scale);
+    renderer.setSize(width, height, false);
+    renderer.render(scene, camera);
+
+    const out = document.createElement('canvas');
+    out.width = width * scale;
+    out.height = height * scale;
+    const context = out.getContext('2d');
+    context.fillStyle = `#${new THREE.Color(PAPER).getHexString()}`;
+    context.fillRect(0, 0, out.width, out.height);
+    context.drawImage(renderer.domElement, 0, 0, out.width, out.height);
+
+    context.font = `${11 * scale}px ui-monospace, Menlo, monospace`;
+    context.textAlign = 'center';
+    for (const mesh of labelled) {
+      const element = mesh.userData.label.element;
+      if (!mesh.visible || element.style.visibility === 'hidden') continue;
+      const point = mesh.userData.label.position.clone();
+      mesh.localToWorld(point).project(camera);
+      if (point.z > 1) continue;
+      context.fillStyle = `rgba(90, 90, 90, ${element.style.opacity || 1})`;
+      context.fillText(
+        element.textContent,
+        (point.x * 0.5 + 0.5) * out.width,
+        (-point.y * 0.5 + 0.5) * out.height,
+      );
+    }
+
+    renderer.setPixelRatio(previous);
+    renderer.setSize(width, height, false);
+    return new Promise((done) => out.toBlob(done, 'image/png'));
+  }
+
   // A deleted node shrinks away and then lets go of its GPU memory. The promise
   // resolves once it is gone, so the caller can rewire the edges after.
   function removeNode(id) {
@@ -508,6 +568,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
     setEdges, addNode, removeNode, onEmptyDoubleClick, setRelations,
+    visibleGraph, capture,
     relationColors: EDGE_COLOR,
     typeColors: TYPE_COLOR,
   };

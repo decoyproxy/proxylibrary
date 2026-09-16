@@ -460,3 +460,15 @@ body {
 #presets .forget { opacity: 0.5; }
 #presets .forget:hover { opacity: 1; }
 #presets .save-preset { border-style: dashed; }
+
+#export { display: flex; gap: 6px; pointer-events: auto; }
+#export button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+#export button:hover { color: var(--fg); border-color: var(--fg); }

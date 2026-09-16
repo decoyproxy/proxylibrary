@@ -565,6 +565,37 @@ composer.addEventListener('submit', async (event) => {
   status.textContent = `Wrote ${parsed.wrote}`;
 });
 
+// Export. Both of these hand back what is on screen, filters included — an
+// unfiltered dump is already sitting in backend/data/graph.json.
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function stamp() {
+  return new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+}
+
+document.querySelector('#export-json').addEventListener('click', () => {
+  const visible = galaxy.visibleGraph();
+  download(
+    new Blob([JSON.stringify(visible, null, 2)], { type: 'application/json' }),
+    `proxylibrary-${visible.view}-${stamp()}.json`,
+  );
+  status.textContent = `Exported ${visible.nodes.length} nodes · ${visible.edges.length} edges`;
+});
+
+document.querySelector('#capture-png').addEventListener('click', async () => {
+  status.textContent = 'Capturing…';
+  const blob = await galaxy.capture(2);
+  download(blob, `proxylibrary-${stamp()}.png`);
+  status.textContent = `Captured ${Math.round(blob.size / 1024)} KB`;
+});
+
 // Saved views. A research angle — "Art plus SPARK edges" — is a combination of
 // every filter at once, and retyping it is the kind of thing you stop doing.
 // They live in this browser: the library is local, and a preset is a way of
