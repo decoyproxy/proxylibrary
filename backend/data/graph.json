@@ -2,7 +2,7 @@
   "nodes": [
     {
       "id": "AST_FOREST_01",
-      "title": "AST_FOREST_01",
+      "title": "AST FOREST 01",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -12,9 +12,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": 50.9,
-          "y": 79.7,
-          "z": -71.3
+          "x": 90.5,
+          "y": 90.5,
+          "z": -60.4
         },
         "ontological": {
           "x": 68.0,
@@ -30,7 +30,7 @@
     },
     {
       "id": "AST_FOREST_02",
-      "title": "AST_FOREST_02",
+      "title": "AST FOREST 02",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -40,9 +40,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": 47.5,
-          "y": 75.5,
-          "z": -90.1
+          "x": 100.0,
+          "y": 83.1,
+          "z": -99.9
         },
         "ontological": {
           "x": 67.5,
@@ -58,7 +58,7 @@
     },
     {
       "id": "AST_FOREST_03",
-      "title": "AST_FOREST_03",
+      "title": "AST FOREST 03",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -68,9 +68,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": 23.2,
-          "y": 66.8,
-          "z": -84.3
+          "x": 74.0,
+          "y": 86.5,
+          "z": -100.0
         },
         "ontological": {
           "x": 66.0,
@@ -100,9 +100,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": 60.8,
-          "y": 59.8,
-          "z": -100.0
+          "x": 94.2,
+          "y": 99.3,
+          "z": -86.9
         },
         "ontological": {
           "x": 50.4,
@@ -118,7 +118,7 @@
     },
     {
       "id": "AST_NIGHT_01",
-      "title": "AST_NIGHT_01",
+      "title": "AST NIGHT 01",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -128,9 +128,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": -74.4,
-          "y": -88.9,
-          "z": -3.0
+          "x": 42.2,
+          "y": -88.2,
+          "z": -61.4
         },
         "ontological": {
           "x": 60.0,
@@ -146,7 +146,7 @@
     },
     {
       "id": "AST_NIGHT_02",
-      "title": "AST_NIGHT_02",
+      "title": "AST NIGHT 02",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -156,9 +156,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": -100.0,
-          "y": -97.5,
-          "z": 4.7
+          "x": 74.9,
+          "y": -87.7,
+          "z": -77.5
         },
         "ontological": {
           "x": 55.7,
@@ -174,7 +174,7 @@
     },
     {
       "id": "AST_NIGHT_03",
-      "title": "AST_NIGHT_03",
+      "title": "AST NIGHT 03",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -184,9 +184,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": -86.2,
-          "y": -79.4,
-          "z": 14.8
+          "x": 47.6,
+          "y": -93.4,
+          "z": -96.5
         },
         "ontological": {
           "x": 50.5,
@@ -202,7 +202,7 @@
     },
     {
       "id": "AST_NIGHT_SKY",
-      "title": "AST_NIGHT_SKY",
+      "title": "AST NIGHT SKY",
       "type": "Asset",
       "importance": 3,
       "domain": "Art",
@@ -212,9 +212,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": -87.3,
+          "x": 66.9,
           "y": -100.0,
-          "z": 23.6
+          "z": -70.7
         },
         "ontological": {
           "x": 44.6,
@@ -243,9 +243,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 37.0,
-          "y": -61.8,
-          "z": 59.9
+          "x": -59.2,
+          "y": -61.4,
+          "z": 33.8
         },
         "ontological": {
           "x": 45.9,
@@ -274,9 +274,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -35.5,
-          "y": -66.6,
-          "z": 53.3
+          "x": -30.0,
+          "y": -62.8,
+          "z": -48.9
         },
         "ontological": {
           "x": 30.9,
@@ -304,9 +304,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 15.0,
-          "y": -64.6,
-          "z": 79.3
+          "x": -55.5,
+          "y": -72.8,
+          "z": -0.9
         },
         "ontological": {
           "x": 28.0,
@@ -334,9 +334,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 64.3,
-          "y": 14.7,
-          "z": 1.4
+          "x": -25.9,
+          "y": 17.5,
+          "z": 10.2
         },
         "ontological": {
           "x": 49.7,
@@ -365,9 +365,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -17.5,
-          "y": 54.4,
-          "z": -48.6
+          "x": -44.0,
+          "y": 66.4,
+          "z": -72.9
         },
         "ontological": {
           "x": 7.1,
@@ -395,9 +395,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 69.0,
-          "y": -14.4,
-          "z": 31.0
+          "x": -40.5,
+          "y": -8.9,
+          "z": 48.3
         },
         "ontological": {
           "x": -1.2,
@@ -426,9 +426,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 54.3,
-          "y": -27.0,
-          "z": 15.0
+          "x": -15.1,
+          "y": -6.1,
+          "z": 25.4
         },
         "ontological": {
           "x": 63.0,
@@ -457,9 +457,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 66.1,
-          "y": 64.8,
-          "z": -24.1
+          "x": 16.2,
+          "y": 59.1,
+          "z": -20.1
         },
         "ontological": {
           "x": 52.2,
@@ -489,9 +489,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 61.7,
-          "y": -30.7,
-          "z": 63.2
+          "x": -54.9,
+          "y": -39.5,
+          "z": 69.8
         },
         "ontological": {
           "x": -15.0,
@@ -520,9 +520,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -23.4,
-          "y": 82.3,
-          "z": -20.7
+          "x": -39.5,
+          "y": 90.4,
+          "z": -31.9
         },
         "ontological": {
           "x": -20.6,
@@ -551,9 +551,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -35.6,
-          "y": 93.7,
-          "z": -47.2
+          "x": -67.3,
+          "y": 82.8,
+          "z": -55.8
         },
         "ontological": {
           "x": -22.0,
@@ -582,9 +582,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 89.5,
-          "y": 75.5,
-          "z": -21.2
+          "x": 40.1,
+          "y": 41.7,
+          "z": -34.5
         },
         "ontological": {
           "x": 79.9,
@@ -613,9 +613,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 56.9,
-          "y": -5.8,
-          "z": 72.5
+          "x": -76.0,
+          "y": -30.0,
+          "z": 87.3
         },
         "ontological": {
           "x": -52.1,
@@ -644,9 +644,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 43.6,
-          "y": -38.8,
-          "z": 40.1
+          "x": -30.9,
+          "y": -38.5,
+          "z": 44.0
         },
         "ontological": {
           "x": -68.8,
@@ -675,9 +675,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -46.7,
-          "y": 66.8,
-          "z": 0.4
+          "x": -75.7,
+          "y": 77.5,
+          "z": 20.0
         },
         "ontological": {
           "x": 4.7,
@@ -706,9 +706,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -45.4,
-          "y": -60.2,
-          "z": 26.7
+          "x": 10.1,
+          "y": -67.8,
+          "z": -48.9
         },
         "ontological": {
           "x": -77.5,
@@ -737,9 +737,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 70.7,
-          "y": -58.2,
-          "z": 53.5
+          "x": -22.1,
+          "y": -61.5,
+          "z": 48.8
         },
         "ontological": {
           "x": -52.8,
@@ -768,9 +768,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -49.5,
-          "y": 68.7,
-          "z": -47.0
+          "x": -68.1,
+          "y": 62.6,
+          "z": -45.6
         },
         "ontological": {
           "x": -39.8,
@@ -799,9 +799,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -21.8,
-          "y": 100.0,
-          "z": -21.5
+          "x": -55.7,
+          "y": 91.6,
+          "z": -1.5
         },
         "ontological": {
           "x": 18.8,
@@ -830,9 +830,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 100.0,
-          "y": 57.7,
-          "z": -19.9
+          "x": 26.2,
+          "y": 36.9,
+          "z": -6.3
         },
         "ontological": {
           "x": 24.4,
@@ -861,9 +861,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 51.3,
-          "y": -20.8,
-          "z": 94.0
+          "x": -89.8,
+          "y": -47.9,
+          "z": 100.0
         },
         "ontological": {
           "x": 38.8,
@@ -891,9 +891,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 98.2,
-          "y": 57.2,
-          "z": -49.0
+          "x": 49.0,
+          "y": 62.5,
+          "z": -44.4
         },
         "ontological": {
           "x": -49.7,
@@ -921,9 +921,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": 62.8,
-          "y": -59.7,
-          "z": 88.5
+          "x": -58.0,
+          "y": -73.0,
+          "z": 77.1
         },
         "ontological": {
           "x": -71.0,
@@ -949,9 +949,9 @@
       "media": "image",
       "coordinates": {
         "semantic": {
-          "x": 46.4,
-          "y": -38.6,
-          "z": 100.0
+          "x": -94.2,
+          "y": -64.4,
+          "z": 78.6
         },
         "ontological": {
           "x": -54.3,
@@ -980,9 +980,9 @@
       "media": "text",
       "coordinates": {
         "semantic": {
-          "x": -55.3,
-          "y": 93.1,
-          "z": -18.1
+          "x": -80.6,
+          "y": 100.0,
+          "z": -13.9
         },
         "ontological": {
           "x": 51.9,
@@ -998,7 +998,7 @@
     },
     {
       "id": "SRC_UMWELT_PDF",
-      "title": "SRC_UMWELT_PDF",
+      "title": "SRC UMWELT PDF",
       "type": "Source",
       "importance": 3,
       "domain": "Art",
@@ -1008,9 +1008,9 @@
       "media": "pdf",
       "coordinates": {
         "semantic": {
-          "x": -74.8,
-          "y": 58.0,
-          "z": -8.7
+          "x": -100.0,
+          "y": 69.7,
+          "z": 2.0
         },
         "ontological": {
           "x": -42.8,
@@ -1029,182 +1029,182 @@
     {
       "source": "AST_PRINT_01",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.719
+      "type": "RESEARCH",
+      "weight": 0.714
     },
     {
       "source": "AST_RAW_0431",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.505
+      "type": "RESEARCH",
+      "weight": 0.507
     },
     {
       "source": "AST_RAW_0522",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.559
+      "type": "RESEARCH",
+      "weight": 0.562
     },
     {
       "source": "AST_SCRIPT_EMB",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.554
+      "type": "RESEARCH",
+      "weight": 0.547
     },
     {
       "source": "AST_VIDEO_01",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.718
+      "type": "RESEARCH",
+      "weight": 0.717
     },
     {
       "source": "CON_INDEXICALITY",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.544
+      "type": "RESEARCH",
+      "weight": 0.528
     },
     {
       "source": "CON_LATENT",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.555
+      "type": "RESEARCH",
+      "weight": 0.52
     },
     {
       "source": "CON_MACHINE_VISION",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.456
+      "type": "RESEARCH",
+      "weight": 0.419
     },
     {
       "source": "CON_MATERIALITY",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.669
+      "type": "RESEARCH",
+      "weight": 0.648
     },
     {
       "source": "CON_NONHUMAN",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.623
+      "type": "RESEARCH",
+      "weight": 0.605
     },
     {
       "source": "CON_UEXKULL",
       "target": "CON_NONHUMAN",
       "type": "RESEARCH",
-      "weight": 0.831
+      "weight": 0.81
     },
     {
       "source": "CON_UEXKULL",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.738
+      "type": "RESEARCH",
+      "weight": 0.735
     },
     {
       "source": "FRG_AI_CHAT_01",
       "target": "CON_MACHINE_VISION",
       "type": "RESEARCH",
-      "weight": 0.68
+      "weight": 0.695
     },
     {
       "source": "FRG_CAMERA_EYE",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.531
+      "type": "RESEARCH",
+      "weight": 0.514
     },
     {
       "source": "FRG_STUDIO_01",
       "target": "PRJ_DECOY",
-      "type": "ASSEMBLE",
-      "weight": 0.671
+      "type": "RESEARCH",
+      "weight": 0.647
     },
     {
       "source": "FRG_TICK",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.512
+      "type": "RESEARCH",
+      "weight": 0.504
     },
     {
       "source": "FRG_WALK_01",
       "target": "PRJ_UMWELT",
-      "type": "ASSEMBLE",
-      "weight": 0.518
+      "type": "RESEARCH",
+      "weight": 0.494
     },
     {
       "source": "SRC_2026_001",
       "target": "FRG_TICK",
-      "type": "SPARK",
-      "weight": 0.562
+      "type": "RESEARCH",
+      "weight": 0.586
     },
     {
       "source": "SRC_2026_001",
       "target": "FRG_WALK_01",
-      "type": "SPARK",
-      "weight": 0.49
+      "type": "RESEARCH",
+      "weight": 0.456
     },
     {
       "source": "SRC_2026_001",
       "target": "CON_NONHUMAN",
       "type": "RESEARCH",
-      "weight": 0.846
+      "weight": 0.873
     },
     {
       "source": "SRC_CLIP",
       "target": "FRG_AI_CHAT_01",
-      "type": "SPARK",
-      "weight": 0.708
+      "type": "RESEARCH",
+      "weight": 0.685
     },
     {
       "source": "SRC_CLIP",
       "target": "CON_LATENT",
       "type": "RESEARCH",
-      "weight": 0.507
+      "weight": 0.52
     },
     {
       "source": "SRC_FLUSSER",
       "target": "FRG_CAMERA_EYE",
-      "type": "SPARK",
-      "weight": 0.62
+      "type": "RESEARCH",
+      "weight": 0.61
     },
     {
       "source": "SRC_FLUSSER",
       "target": "CON_MATERIALITY",
       "type": "RESEARCH",
-      "weight": 0.696
+      "weight": 0.71
     },
     {
       "source": "SRC_FLUSSER",
       "target": "CON_INDEXICALITY",
       "type": "RESEARCH",
-      "weight": 0.52
+      "weight": 0.545
     },
     {
       "source": "SRC_PAGLEN",
       "target": "FRG_AI_CHAT_01",
-      "type": "SPARK",
-      "weight": 0.631
+      "type": "RESEARCH",
+      "weight": 0.618
     },
     {
       "source": "SRC_PAGLEN",
       "target": "CON_MACHINE_VISION",
       "type": "RESEARCH",
-      "weight": 0.713
+      "weight": 0.696
     },
     {
       "source": "SRC_PHOTOBOOK_A",
       "target": "FRG_STUDIO_01",
-      "type": "SPARK",
-      "weight": 0.483
+      "type": "RESEARCH",
+      "weight": 0.481
     },
     {
       "source": "SRC_UEXKULL_BOOK",
       "target": "FRG_TICK",
-      "type": "SPARK",
-      "weight": 0.59
+      "type": "RESEARCH",
+      "weight": 0.592
     },
     {
       "source": "SRC_UEXKULL_BOOK",
       "target": "CON_UEXKULL",
       "type": "RESEARCH",
-      "weight": 0.696
+      "weight": 0.692
     }
   ]
 }
