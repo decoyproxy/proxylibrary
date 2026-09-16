@@ -423,3 +423,15 @@ body {
   cursor: pointer;
 }
 #composer .actions button[type='submit'] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+#inspector .delete {
+  margin-top: 14px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+#inspector .delete:hover { border-color: #be185d; color: #be185d; }

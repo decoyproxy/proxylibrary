@@ -41,6 +41,7 @@ import os
 import re
 import sys
 from datetime import date as date_cls
+from datetime import datetime
 from pathlib import Path
 
 import coords
@@ -48,6 +49,9 @@ import coords
 DATA = Path(__file__).parent / "data"
 LIBRARY = Path(os.environ.get("LIBRARY_DIR", DATA / "library"))
 CHROMA = DATA / "chroma"
+# Deleting a node moves its files here. Outside LIBRARY, so the next ingest does
+# not simply pick them up again.
+TRASH = Path(os.environ.get("TRASH_DIR", DATA / ".trash"))
 # CLAUDE.md specifies nomic-embed-text, but its v1.5 remote code is broken under
 # transformers 5.x and pinning transformers back would freeze every contributor's
 # env. multilingual-e5 needs no remote code and handles the Korean notes better.
@@ -237,6 +241,27 @@ def new_note(node_type, title, body="", tags=(), today=None):
     block = "\n".join(f"{key}: {value}" for key, value in front.items())
     write_atomic(path, f"---\n{block}\n---\n\n{body.strip()}\n")
     return path
+
+
+def trash(path):
+    """Move a node's files out of the library instead of deleting them.
+
+    Returns the paths as they now sit in the trash. A research archive is not
+    the place to learn that a delete button meant it; the files keep their
+    relative layout under a timestamped folder, so putting one back is a `mv`.
+    """
+    import shutil
+
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    moved = []
+    for original in (path, meta_path(path)):
+        if original in moved or not original.exists():
+            continue
+        destination = TRASH / stamp / original.relative_to(LIBRARY)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(original), str(destination))
+        moved.append(destination)
+    return moved
 
 
 def write_meta(path, updates):
@@ -589,7 +614,24 @@ def build(found, refit=False):
     return {"nodes": nodes, "edges": edges}
 
 
+def reopen_store():
+    """Drop Chroma's process-wide client cache before reading the store.
+
+    The API server ingests in-process, but watch.py and a manual `python
+    ingest.py` write the same embedded database from another process. A client
+    cached from before their write points at segments that are no longer there,
+    and Chroma answers with "Error finding id" on the next read.
+    """
+    try:
+        from chromadb.api.client import SharedSystemClient
+
+        SharedSystemClient.clear_system_cache()
+    except Exception as error:  # a Chroma version without it is not a reason to stop
+        print(f"could not reset the vector store client: {error}", flush=True)
+
+
 def main(refit=False):
+    reopen_store()
     found = collect()
     if not found:
         raise SystemExit(

@@ -134,6 +134,38 @@ async function changeLinks(node, request) {
   status.textContent = `Saved to ${payload.wrote}`;
 }
 
+async function deleteNode(node) {
+  const warning = `Delete "${node.title}"?\n\n` +
+    `${node.path} moves to backend/data/.trash — nothing is erased, and putting ` +
+    'it back is a single mv. Links to it from other notes stay as written.';
+  if (!confirm(warning)) return;
+
+  status.textContent = `Deleting ${node.id}…`;
+  const res = await fetch(`/api/v1/nodes/${encodeURIComponent(node.id)}`, { method: 'DELETE' });
+  const body = await res.text();
+  let payload = body;
+  try {
+    payload = JSON.parse(body);
+  } catch {}
+  if (!res.ok) {
+    status.textContent = `Delete failed (${res.status}): ${String(payload?.detail ?? payload).slice(0, 140)}`;
+    return;
+  }
+
+  inspector.hidden = true;
+  await galaxy.removeNode(node.id); // let it shrink away before the edges move
+  graph.nodes = payload.nodes;
+  graph.edges = payload.edges;
+  galaxy.setEdges(graph.edges);
+  refreshTypes();
+  refreshDomains();
+  refreshRelations();
+  refreshTags();
+  refreshTagList();
+  refreshNodeList();
+  status.textContent = `Moved to ${payload.trashed.join(', ')}`;
+}
+
 function linkEditor(node) {
   const list = inspector.querySelector('ul');
   const outgoing = new Set(
@@ -270,6 +302,14 @@ function showNode(graph, node) {
     open.textContent = res.ok ? node.path : `failed: ${String(detail).slice(0, 60)}`;
   });
   linkEditor(node);
+
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'delete';
+  remove.textContent = 'Delete node';
+  remove.addEventListener('click', () => deleteNode(node));
+  inspector.append(remove);
+
   inspector.hidden = false;
 }
 

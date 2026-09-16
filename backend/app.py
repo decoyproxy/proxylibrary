@@ -220,6 +220,29 @@ def create_node(new: NewNode):
     return graph
 
 
+@app.delete("/api/v1/nodes/{node_id}")
+def delete_node(node_id: str):
+    """Move the node's files to the trash and rebuild the graph without it.
+
+    Links in *other* notes that pointed here are left exactly as written — they
+    are someone's sentences, and a dangling [[link]] simply stops being an edge.
+    """
+    target = library_file(node_id)
+    moved = ingest.trash(target)
+    if not moved:
+        raise HTTPException(404, f"nothing on disk for {node_id}")
+    ingest.main()
+    graph = store.load()
+    global _collection
+    _collection = None
+    return {
+        "removed": node_id,
+        "trashed": [str(path.relative_to(ingest.DATA)) for path in moved],
+        "nodes": graph["nodes"],
+        "edges": graph["edges"],
+    }
+
+
 @app.patch("/api/v1/nodes/{node_id}")
 def edit_node(node_id: str, edit: Edit):
     """Write the change back to the file, then re-ingest and return the node.

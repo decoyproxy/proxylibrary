@@ -278,6 +278,35 @@ export function createGalaxy(canvas, graph, onSelect) {
     return mesh;
   }
 
+  // A deleted node shrinks away and then lets go of its GPU memory. The promise
+  // resolves once it is gone, so the caller can rewire the edges after.
+  function removeNode(id) {
+    const mesh = byId.get(id);
+    if (!mesh) return Promise.resolve();
+    byId.delete(id);
+    labelled.delete(mesh);
+    const index = billboards.indexOf(mesh);
+    if (index >= 0) billboards.splice(index, 1);
+    from.delete(id);
+    to.delete(id);
+
+    const start = performance.now();
+    const rest = mesh.userData.restScale.clone();
+    return new Promise((done) => {
+      (function shrink(now) {
+        const t = Math.min((now - start) / GROW_MS, 1);
+        mesh.scale.copy(rest).multiplyScalar(1 - easeInOut(t));
+        if (t < 1) return requestAnimationFrame(shrink);
+        mesh.userData.label?.element.remove();
+        scene.remove(mesh);
+        mesh.material.map?.dispose();
+        mesh.material.dispose();
+        for (const child of mesh.children) child.material?.dispose();
+        done();
+      })(start);
+    });
+  }
+
   // An edited node: new size, new label, and a glide to wherever the change
   // moved it in the view on screen. Everything else stays where it is — the
   // `from` map is refreshed from current positions, so their lerp is a no-op.
@@ -478,7 +507,7 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
-    setEdges, addNode, onEmptyDoubleClick, setRelations,
+    setEdges, addNode, removeNode, onEmptyDoubleClick, setRelations,
     relationColors: EDGE_COLOR,
     typeColors: TYPE_COLOR,
   };
