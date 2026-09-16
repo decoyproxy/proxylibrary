@@ -25,6 +25,8 @@ async function saveNode(node, changes) {
   }
   Object.assign(node, payload.node); // same object the graph holds
   galaxy.updateNode(node);
+  refreshTypes();
+  refreshDomains();
   showNode(graph, node);
   status.textContent = `Saved to ${payload.wrote}`;
   return true;
@@ -138,39 +140,69 @@ const galaxy = createGalaxy(
 galaxy.setView('semantic');
 status.textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges · drag to orbit, click a node`;
 
-// Type filter. Buttons are built from the types actually present, so a library
-// without images never shows an Asset toggle.
+// Filter bars. Type and domain work the same way, so they are the same code:
+// one toggle per value actually present, with its count.
 const TYPE_ORDER = ['Project', 'Concept', 'Source', 'Fragment', 'Asset'];
-const present = TYPE_ORDER.filter((type) => graph.nodes.some((n) => n.type === type));
-const shown = new Set(present);
-const types = document.querySelector('#types');
+const DOMAIN_ORDER = ['Art', 'Science', 'Philosophy'];
 
-for (const type of present) {
-  const count = graph.nodes.filter((n) => n.type === type).length;
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.type = type;
-  button.setAttribute('aria-pressed', 'true');
-  button.style.setProperty('--swatch', `#${galaxy.typeColors[type].toString(16).padStart(6, '0')}`);
-  button.innerHTML = '<span class="swatch"></span><span class="name"></span><span class="count"></span>';
-  button.querySelector('.swatch').style.background = button.style.getPropertyValue('--swatch');
-  button.querySelector('.name').textContent = type;
-  button.querySelector('.count').textContent = count;
-  types.append(button);
+function filterBar(nav, keyOf, order, colourOf, apply) {
+  const values = [...new Set([...order, ...graph.nodes.map(keyOf)])]
+    .filter((value) => graph.nodes.some((node) => keyOf(node) === value));
+  const shown = new Set(values);
+
+  for (const value of values) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.value = value;
+    button.setAttribute('aria-pressed', 'true');
+    button.innerHTML = '<span class="swatch"></span><span class="name"></span><span class="count"></span>';
+    const colour = colourOf?.(value);
+    if (colour) button.querySelector('.swatch').style.background = colour;
+    else button.querySelector('.swatch').remove();
+    button.querySelector('.name').textContent = value;
+    nav.append(button);
+  }
+
+  // Counts follow the graph, which an inspector edit can change.
+  function refresh() {
+    for (const button of nav.children) {
+      button.querySelector('.count').textContent =
+        graph.nodes.filter((node) => keyOf(node) === button.dataset.value).length;
+    }
+  }
+
+  nav.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-value]');
+    if (!button) return;
+    const value = button.dataset.value;
+    // Turning the last one off would leave an empty screen; treat that click as
+    // "show everything again" instead.
+    if (shown.has(value) && shown.size === 1) values.forEach((v) => shown.add(v));
+    else if (shown.has(value)) shown.delete(value);
+    else shown.add(value);
+    for (const b of nav.children) b.setAttribute('aria-pressed', String(shown.has(b.dataset.value)));
+    apply(shown);
+  });
+
+  refresh();
+  apply(shown);
+  return refresh;
 }
 
-types.addEventListener('click', (event) => {
-  const button = event.target.closest('button[data-type]');
-  if (!button) return;
-  const type = button.dataset.type;
-  // Turning the last one off would leave an empty screen; treat that click as
-  // "show only this one" instead.
-  if (shown.has(type) && shown.size === 1) present.forEach((t) => shown.add(t));
-  else if (shown.has(type)) shown.delete(type);
-  else shown.add(type);
-  for (const b of types.children) b.setAttribute('aria-pressed', String(shown.has(b.dataset.type)));
-  galaxy.setTypes(shown);
-});
+const refreshTypes = filterBar(
+  document.querySelector('#types'),
+  (node) => node.type,
+  TYPE_ORDER,
+  (type) => `#${(galaxy.typeColors[type] ?? 0).toString(16).padStart(6, '0')}`,
+  (shown) => galaxy.setTypes(shown),
+);
+const refreshDomains = filterBar(
+  document.querySelector('#domains'),
+  (node) => node.domain,
+  DOMAIN_ORDER,
+  null,
+  (shown) => galaxy.setDomains(shown),
+);
 
 // Timeline. Only the temporal view has an axis where "before this month" means
 // anything, so the scrubber appears with it and releases the graph when you

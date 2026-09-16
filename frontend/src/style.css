@@ -113,13 +113,15 @@ body {
   border: 1px solid var(--line);
 }
 
-#types {
+#types,
+#domains {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   pointer-events: auto;
 }
-#types button {
+#types button,
+#domains button {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -131,16 +133,21 @@ body {
   cursor: pointer;
   font: inherit;
 }
-#types button .swatch {
+#types button .swatch,
+#domains button .swatch {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: currentColor;
   opacity: 0.25;
 }
-#types button[aria-pressed='true'] { color: var(--fg); border-color: var(--fg); }
+#types button[aria-pressed='true'],
+#domains button[aria-pressed='true'] { color: var(--fg); border-color: var(--fg); }
 #types button[aria-pressed='true'] .swatch { opacity: 1; }
-#types .count { color: var(--dim); font-variant-numeric: tabular-nums; }
+#domains button[aria-pressed='true'] { background: var(--fg); color: var(--bg); }
+#types .count,
+#domains .count { color: var(--dim); font-variant-numeric: tabular-nums; }
+#domains button[aria-pressed='true'] .count { color: var(--bg); opacity: 0.7; }
 
 /* Narrow windows: the inspector becomes a bottom sheet instead of sitting on
    top of the result list. */

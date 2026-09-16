@@ -270,12 +270,14 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
-  // Two independent filters decide what is drawn — the type toggles and the
-  // timeline — so neither may write mesh.visible directly or the last one to
-  // run would undo the other.
+  // Three independent filters decide what is drawn — type, domain and the
+  // timeline — so none may write mesh.visible directly or the last one to run
+  // would undo the others.
   function applyVisibility() {
     for (const mesh of byId.values()) {
-      const visible = mesh.userData.typeOn !== false && mesh.userData.timeOn !== false;
+      const visible = mesh.userData.typeOn !== false &&
+        mesh.userData.domainOn !== false &&
+        mesh.userData.timeOn !== false;
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
     }
@@ -287,6 +289,14 @@ export function createGalaxy(canvas, graph, onSelect) {
   function setTypes(types) {
     for (const mesh of byId.values()) {
       mesh.userData.typeOn = types.has(mesh.userData.node.type);
+    }
+    applyVisibility();
+  }
+
+  // Domain filter, the same shape as the type one.
+  function setDomains(domains) {
+    for (const mesh of byId.values()) {
+      mesh.userData.domainOn = domains.has(mesh.userData.node.domain);
     }
     applyVisibility();
   }
@@ -400,5 +410,8 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
   requestAnimationFrame(frame);
 
-  return { setView, focus, highlight, setTypes, setCutoff, updateNode, typeColors: TYPE_COLOR };
+  return {
+    setView, focus, highlight, setTypes, setDomains, setCutoff, updateNode,
+    typeColors: TYPE_COLOR,
+  };
 }
