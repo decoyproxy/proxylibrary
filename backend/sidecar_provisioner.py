@@ -30,7 +30,7 @@ def provision(root=ingest.LIBRARY):
         modified = date.fromtimestamp(asset.stat().st_mtime).isoformat()
         ingest.write_atomic(
             sidecar,
-            f"---\ntitle: {title}\nimportance: 3\ndomain: Art\ndate: {modified}\ntags: \n---\n",
+            f"---\ntitle: {title}\nimportance: 3\ndomain: Art\ndate: {modified}\ntags:\n---\n",
         )
         created.append(str(sidecar.relative_to(root)))
     return created
