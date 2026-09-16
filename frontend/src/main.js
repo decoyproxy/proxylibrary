@@ -108,18 +108,129 @@ function buildEditor(node) {
   tags.addEventListener('blur', add);
 }
 
+const RELATIONS = ['SPARK', 'RESEARCH', 'ASSEMBLE'];
+
+// Link changes come back with the whole graph: an edge belongs to two nodes, so
+// there is no patching one node's copy of it.
+async function changeLinks(node, request) {
+  status.textContent = `Rewiring ${node.id}…`;
+  const res = await fetch(request.url, request.init);
+  const body = await res.text();
+  let payload = body;
+  try {
+    payload = JSON.parse(body);
+  } catch {}
+  if (!res.ok) {
+    status.textContent = `Link failed (${res.status}): ${String(payload?.detail ?? payload).slice(0, 160)}`;
+    return;
+  }
+  graph.nodes.forEach((existing) => {
+    const fresh = payload.nodes.find((n) => n.id === existing.id);
+    if (fresh) Object.assign(existing, fresh);
+  });
+  graph.edges = payload.edges;
+  galaxy.setEdges(graph.edges);
+  galaxy.updateNode(node);
+  showNode(graph, node);
+  status.textContent = `Saved to ${payload.wrote}`;
+}
+
+function linkEditor(node) {
+  const list = inspector.querySelector('ul');
+  const outgoing = new Set(
+    graph.edges.filter((e) => e.source === node.id).map((e) => e.target),
+  );
+
+  for (const edge of graph.edges.filter((e) => e.source === node.id || e.target === node.id)) {
+    const otherId = edge.source === node.id ? edge.target : edge.source;
+    const other = graph.nodes.find((n) => n.id === otherId);
+    const row = document.createElement('li');
+    row.innerHTML =
+      '<select class="relation"></select><span class="who"></span><button type="button" class="drop">×</button>';
+    const relation = row.querySelector('.relation');
+    for (const name of RELATIONS) {
+      const option = document.createElement('option');
+      option.value = option.textContent = name;
+      option.selected = name === edge.type;
+      relation.append(option);
+    }
+    row.querySelector('.who').textContent = other ? other.title : otherId;
+
+    // Only the note that contains the link can change it; the other end is
+    // shown for context and marked as belonging elsewhere.
+    const mine = outgoing.has(otherId) && edge.source === node.id;
+    relation.disabled = !mine;
+    row.querySelector('.drop').disabled = !mine;
+    if (!mine) row.classList.add('inbound');
+
+    relation.addEventListener('change', () => changeLinks(node, {
+      url: `/api/v1/nodes/${encodeURIComponent(node.id)}/links`,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: otherId, relation: relation.value }),
+      },
+    }));
+    row.querySelector('.drop').addEventListener('click', () => changeLinks(node, {
+      url: `/api/v1/nodes/${encodeURIComponent(node.id)}/links/${encodeURIComponent(otherId)}`,
+      init: { method: 'DELETE' },
+    }));
+    list.append(row);
+  }
+
+  const adder = document.createElement('li');
+  adder.className = 'add-link';
+  adder.innerHTML =
+    '<select class="relation"></select><input class="target" list="all-nodes" placeholder="link to…" aria-label="Link to" />';
+  const relation = adder.querySelector('.relation');
+  for (const name of RELATIONS) {
+    const option = document.createElement('option');
+    option.value = option.textContent = name;
+    relation.append(option);
+  }
+  const target = adder.querySelector('.target');
+  const add = () => {
+    const wanted = target.value.trim();
+    target.value = '';
+    if (!wanted) return;
+    const match = graph.nodes.find((n) => n.id === wanted || n.title === wanted);
+    if (!match) {
+      status.textContent = `No node called "${wanted}"`;
+      return;
+    }
+    changeLinks(node, {
+      url: `/api/v1/nodes/${encodeURIComponent(node.id)}/links`,
+      init: {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: match.id, relation: relation.value }),
+      },
+    });
+  };
+  target.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    add();
+  });
+  target.addEventListener('blur', add);
+  list.append(adder);
+}
+
+function refreshNodeList() {
+  const list = document.querySelector('#all-nodes');
+  list.replaceChildren(...graph.nodes.map((node) => {
+    const option = document.createElement('option');
+    option.value = node.title;
+    option.label = node.id;
+    return option;
+  }));
+}
+
 function showNode(graph, node) {
   if (!node) {
     inspector.hidden = true;
     return;
   }
-  const links = graph.edges
-    .filter((e) => e.source === node.id || e.target === node.id)
-    .map((e) => {
-      const otherId = e.source === node.id ? e.target : e.source;
-      const other = graph.nodes.find((n) => n.id === otherId);
-      return `[${e.type}] ${other ? other.title : otherId}`;
-    });
   inspector.innerHTML = `
     <h2><input class="title" aria-label="Title" /></h2>
     <dl>
@@ -159,12 +270,7 @@ function showNode(graph, node) {
     } catch {}
     open.textContent = res.ok ? node.path : `failed: ${String(detail).slice(0, 60)}`;
   });
-  const list = inspector.querySelector('ul');
-  for (const text of links) {
-    const li = document.createElement('li');
-    li.textContent = text;
-    list.append(li);
-  }
+  linkEditor(node);
   inspector.hidden = false;
 }
 
@@ -302,6 +408,7 @@ tagsNav.addEventListener('click', (event) => {
 
 refreshTags();
 refreshTagList();
+refreshNodeList();
 
 const refreshDomains = filterBar(
   document.querySelector('#domains'),

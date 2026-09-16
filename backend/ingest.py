@@ -28,8 +28,10 @@ distances still come from the text model, which reads long documents far better
 than CLIP's 77-token encoder. Search keeps the raw CLIP vectors in their own
 collection, since scores from two spaces cannot be compared.
 
-Edges come from [[wiki-links]] in the body; the edge type is derived from what
-the link points AT (-> Project = ASSEMBLE, -> Concept = RESEARCH, else SPARK).
+Edges come from [[wiki-links]] in the body. A link on a line of its own may name
+its relation — "- [SPARK] [[FRG_TICK]]" — and otherwise the type is derived from
+what the link points AT (-> Project = ASSEMBLE, -> Concept = RESEARCH, else
+SPARK), which is what every note written before relations were editable does.
 
 Everything runs locally: the embedding model runs on MPS, ChromaDB is embedded
 on disk. No network calls beyond the one-time model download.
@@ -74,6 +76,12 @@ EDGE_BY_TARGET = {"Project": "ASSEMBLE", "Concept": "RESEARCH"}
 
 FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 WIKI_LINK = re.compile(r"\[\[([^\]|]+)")
+# A whole line that is nothing but a link, optionally bulleted and typed. Only
+# these are safe for the editor to rewrite or delete; a link inside a sentence
+# belongs to the sentence.
+LINK_LINE = re.compile(
+    r"^(?P<bullet>\s*[-*]\s*)?(?:\[(?P<kind>[A-Z]+)\]\s*)?\[\[(?P<target>[^\]|]+)\]\]\s*$"
+)
 
 
 def node_type(folder_name):
@@ -143,12 +151,69 @@ def parse(path):
     return meta, body
 
 
-def write_meta(path, updates):
-    """Update front matter in place, keeping the body and any keys we don't know.
+def read_links(body):
+    """-> [(target, relation or None)] for every wiki link in the text."""
+    links = []
+    for line in body.splitlines():
+        match = LINK_LINE.match(line)
+        if match:
+            links.append((match.group("target").strip(), match.group("kind")))
+        else:
+            links.extend((target.strip(), None) for target in WIKI_LINK.findall(line))
+    return links
 
-    Written to a temporary file and renamed over the original, so an interrupted
-    write cannot leave someone's research note truncated.
+
+def write_atomic(path, text):
+    """Write through a temporary and rename over the original, so an interrupted
+    write cannot leave someone's research note truncated."""
+    temporary = path.with_name(f".{path.name}.writing")
+    temporary.write_text(text, encoding="utf-8")
+    os.replace(temporary, path)
+    return path
+
+
+def set_link(path, target, kind):
+    """Add a relation, or change the one an existing link line carries."""
+    file = meta_path(path)
+    raw = file.read_text(encoding="utf-8") if file.exists() else ""
+    lines = raw.splitlines()
+    written = f"- [{kind}] [[{target}]]"
+    for i, line in enumerate(lines):
+        match = LINK_LINE.match(line)
+        if match and match.group("target").strip() == target:
+            lines[i] = written
+            break
+    else:
+        # Keep link lines together; separate them from prose with one blank line.
+        if lines and lines[-1].strip() and not LINK_LINE.match(lines[-1]):
+            lines.append("")
+        lines.append(written)
+    return write_atomic(file, "\n".join(lines) + "\n")
+
+
+def drop_link(path, target):
+    """Remove a link that sits on a line of its own.
+
+    A link inside a sentence is left alone: deleting that line would delete the
+    sentence, and no edge is worth someone's note.
     """
+    file = meta_path(path)
+    raw = file.read_text(encoding="utf-8") if file.exists() else ""
+    kept, removed = [], False
+    for line in raw.splitlines():
+        match = LINK_LINE.match(line)
+        if match and match.group("target").strip() == target:
+            removed = True
+            continue
+        kept.append(line)
+    if not removed:
+        return None
+    write_atomic(file, "\n".join(kept) + "\n")
+    return file
+
+
+def write_meta(path, updates):
+    """Update front matter in place, keeping the body and any keys we don't know."""
     target = meta_path(path)
     raw = target.read_text(encoding="utf-8") if target.exists() else ""
     fields, body = front_matter(raw)
@@ -159,10 +224,7 @@ def write_meta(path, updates):
     block = "\n".join(f"{key}: {value}" for key, value in fields.items())
     body = body.lstrip("\n")
     rewritten = f"---\n{block}\n---\n" + (f"\n{body}" if body else "")
-    temporary = target.with_name(f".{target.name}.writing")
-    temporary.write_text(rewritten, encoding="utf-8")
-    os.replace(temporary, target)
-    return target
+    return write_atomic(target, rewritten)
 
 
 def fingerprint(path):
@@ -200,7 +262,7 @@ def collect():
                 "path": str(path.relative_to(LIBRARY)),
                 "media": media_kind(path),
                 "fingerprint": fingerprint(path),
-                "links": WIKI_LINK.findall(body),
+                "links": read_links(body),
             }
             # Tags are part of what a document is about, so they belong in the
             # text that gets embedded, not only in the metadata.
@@ -479,15 +541,14 @@ def build(found, refit=False):
     by_id = {n["id"]: n for n in nodes}
     edges, seen = [], set()
     for node in nodes:
-        for target in node.pop("links"):
-            target = target.strip()
+        for target, kind in node.pop("links"):
             if target not in by_id or target == node["id"] or (node["id"], target) in seen:
                 continue
             seen.add((node["id"], target))
             edges.append({
                 "source": node["id"],
                 "target": target,
-                "type": EDGE_BY_TARGET.get(by_id[target]["type"], "SPARK"),
+                "type": kind or EDGE_BY_TARGET.get(by_id[target]["type"], "SPARK"),
             })
 
     span = (min(coords.months(n["date"]) for n in nodes),

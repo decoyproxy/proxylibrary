@@ -70,6 +70,19 @@ def open_file(node_id: str):
 
 
 DOMAINS = ("Art", "Science", "Philosophy")
+RELATIONS = ("SPARK", "RESEARCH", "ASSEMBLE")
+
+
+class Link(BaseModel):
+    target: str
+    relation: str
+
+    @field_validator("relation")
+    @classmethod
+    def known_relation(cls, value):
+        if value not in RELATIONS:
+            raise ValueError(f"relation must be one of {', '.join(RELATIONS)}")
+        return value
 
 
 class Edit(BaseModel):
@@ -120,6 +133,45 @@ class Edit(BaseModel):
 @app.get("/api/v1/nodes")
 def nodes():
     return store.load()
+
+
+def regraph(written, node_id):
+    """Re-ingest and answer with the whole graph: an edge belongs to two nodes,
+    so the caller cannot patch its own copy from one of them."""
+    ingest.main()
+    graph = store.load()
+    global _collection
+    _collection = None
+    return {
+        "node": next((n for n in graph["nodes"] if n["id"] == node_id), None),
+        "nodes": graph["nodes"],
+        "edges": graph["edges"],
+        "wrote": str(written.relative_to(ingest.LIBRARY)),
+    }
+
+
+@app.post("/api/v1/nodes/{node_id}/links")
+def add_link(node_id: str, link: Link):
+    """Write the relation into the note as `- [RELATION] [[target]]`."""
+    source = library_file(node_id)
+    if link.target == node_id:
+        raise HTTPException(400, "a node cannot link to itself")
+    if not any(n["id"] == link.target for n in store.load()["nodes"]):
+        raise HTTPException(404, f"no node {link.target}")
+    return regraph(ingest.set_link(source, link.target, link.relation), node_id)
+
+
+@app.delete("/api/v1/nodes/{node_id}/links/{target}")
+def remove_link(node_id: str, target: str):
+    """Remove a link that sits on a line of its own; leave prose alone."""
+    written = ingest.drop_link(library_file(node_id), target)
+    if not written:
+        raise HTTPException(
+            409,
+            f"{target} is linked from inside a sentence, not on a line of its own — "
+            "edit the note itself so the writing is not lost",
+        )
+    return regraph(written, node_id)
 
 
 @app.patch("/api/v1/nodes/{node_id}")

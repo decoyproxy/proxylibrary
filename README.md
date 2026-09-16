@@ -40,8 +40,9 @@ date: 2025-08-14
 - [[PRJ_UMWELT]]
 ```
 
-파일 이름(확장자 제외)이 노드 id다. 본문의 `[[id]]`가 엣지가 되고, 엣지 타입은
-가리키는 대상에서 결정된다 (→Project = ASSEMBLE, →Concept = RESEARCH, 그 외 SPARK).
+파일 이름(확장자 제외)이 노드 id다. 본문의 `[[id]]`가 엣지가 된다. 링크가 한 줄을
+통째로 차지하면 관계를 직접 적을 수 있고(`- [SPARK] [[FRG_TICK]]`), 적지 않으면 가리키는
+대상에서 결정된다 (→Project = ASSEMBLE, →Concept = RESEARCH, 그 외 SPARK).
 
 그 다음:
 
@@ -154,6 +155,16 @@ Animals and Humans*가 잡힌다. 결과는 갤럭시에서 밝게 남고 나머
 태그는 임베딩되는 텍스트에도 들어간다 — 문서가 무엇에 관한 것인지의 일부이지
 붙여둔 딱지가 아니다.
 
+## 관계 편집
+
+카드 아래쪽에서 다른 노드와의 연결을 추가·삭제하고 관계 타입을 바꿀 수 있다.
+들어오는 링크(다른 노트가 이 노트를 가리키는 것)는 기울임으로 표시되고 편집할 수 없다 —
+그 링크는 저쪽 노트의 문장이기 때문이다.
+
+삭제는 **링크만 있는 줄**에만 한다. 문장 속에 섞인 `[[링크]]`를 지우려면 그 문장을
+지워야 하므로, 그런 요청은 409로 거절하고 노트를 직접 고치라고 답한다. 엣지 하나가
+남의 문장보다 귀하지 않다.
+
 ## 필터
 
 타입·도메인·태그 세 줄, 그리고 Temporal 뷰의 타임라인. 넷은 서로를 덮어쓰지 않는다 —
@@ -183,8 +194,10 @@ Play를 누르면 라이브러리가 실제로 자란 순서대로 은하가 펼
 `GET /api/v1/search?q=…&limit=8` → `{ "query": …, "results": [...], "images": [...] }`
 `GET /media/<path>` → library 안의 원본 파일 (썸네일용, 읽기 전용)
 `POST /api/v1/open/{node_id}` → 해당 노드의 원본을 macOS 기본 앱으로 연다 (로컬 전용)
-`PATCH /api/v1/nodes/{node_id}` → `{importance?, domain?, tags?}`를 front matter에 쓰고
-재인제스트 후 갱신된 노드를 돌려준다
+`PATCH /api/v1/nodes/{node_id}` → `{title?, date?, importance?, domain?, tags?}`를
+front matter에 쓰고 재인제스트 후 갱신된 노드를 돌려준다
+`POST /api/v1/nodes/{node_id}/links` → `{target, relation}`을 본문에 링크 줄로 쓴다
+`DELETE /api/v1/nodes/{node_id}/links/{target}` → 링크 줄을 지운다 (문장 속 링크는 409)
 (인덱스가 없으면 503 — `ingest.py`를 먼저 돌려라.)
 
 노드는 반드시 `coordinates.semantic / .ontological / .temporal` 3종을 모두 갖는다
@@ -201,7 +214,9 @@ Play를 누르면 라이브러리가 실제로 자란 순서대로 은하가 펼
 - **Phase 5 — 완료.** 다국어 CLIP, 타입 필터, 라벨 겹침 해소, 라이트 모드.
 - **Phase 6 — 완료.** 원문 열기, Temporal 타임라인 스크러버.
 - **Phase 7 — 완료.** 인스펙터 메타데이터 편집과 front matter 라이트백, 도메인 필터.
-- **다음 후보.** 스캔 PDF OCR, 제목·날짜 편집, 태그로 필터하기.
+- **Phase 8 — 완료.** 태그 칩 필터, 제목·날짜 편집, 시간축 정규화, 태그 자동완성,
+  관계 편집기.
+- **다음 후보.** 스캔 PDF OCR, 노드 새로 만들기, 관계 타입별 엣지 토글.
 
 ## 디자인
 

@@ -141,22 +141,33 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
 
 
-  const edges = graph.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
-  const positions = new Float32Array(edges.length * 6);
-  const colors = new Float32Array(edges.length * 6);
-  edges.forEach((edge, i) => {
-    const c = new THREE.Color(EDGE_COLOR[edge.type] ?? 0x555566);
-    for (let end = 0; end < 2; end++) c.toArray(colors, i * 6 + end * 3);
-  });
-  const edgeGeom = new THREE.BufferGeometry();
-  edgeGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  edgeGeom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  scene.add(
-    new THREE.LineSegments(
-      edgeGeom,
-      new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.28 }),
-    ),
+  const lines = new THREE.LineSegments(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.28 }),
   );
+  scene.add(lines);
+
+  let edges = [];
+  let positions = new Float32Array(0);
+
+  // Editing a relation changes how many segments there are, so the buffers are
+  // rebuilt rather than rewritten. The old geometry is disposed — a galaxy the
+  // reader keeps rewiring would otherwise leak one buffer per edit.
+  function setEdges(next) {
+    edges = next.filter((edge) => byId.has(edge.source) && byId.has(edge.target));
+    positions = new Float32Array(edges.length * 6);
+    const colors = new Float32Array(edges.length * 6);
+    edges.forEach((edge, i) => {
+      const colour = new THREE.Color(EDGE_COLOR[edge.type] ?? 0x555566);
+      for (let end = 0; end < 2; end++) colour.toArray(colors, i * 6 + end * 3);
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    lines.geometry.dispose();
+    lines.geometry = geometry;
+    updateEdges();
+  }
 
   // View transition: every mesh lerps from where it is to the new view's coordinates.
   let from = new Map();
@@ -208,8 +219,8 @@ export function createGalaxy(canvas, graph, onSelect) {
       from.position.toArray(positions, i * 6);
       (hidden ? from : to).position.toArray(positions, i * 6 + 3);
     });
-    edgeGeom.attributes.position.needsUpdate = true;
-    edgeGeom.computeBoundingSphere();
+    lines.geometry.attributes.position.needsUpdate = true;
+    lines.geometry.computeBoundingSphere();
   }
 
   // Lit dots brighten; thumbnails, which are unlit, get a white tint instead.
@@ -420,9 +431,11 @@ export function createGalaxy(canvas, graph, onSelect) {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  setEdges(graph.edges);
 
   return {
     setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
+    setEdges,
     typeColors: TYPE_COLOR,
   };
 }

@@ -333,3 +333,30 @@ body {
 }
 #inspector .chip:hover { border-color: var(--fg); color: var(--dim); }
 #inspector input.tags { width: auto; flex: 1; min-width: 80px; }
+
+#inspector ul { list-style: none; padding: 0; }
+#inspector ul li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+#inspector ul .who { flex: 1; color: var(--dim); }
+#inspector ul .relation {
+  width: auto;
+  flex: none;
+  font-size: 11px;
+  color: var(--dim);
+}
+#inspector ul .relation:disabled { opacity: 0.6; }
+#inspector ul .drop {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+}
+#inspector ul .drop:hover:not(:disabled) { color: var(--fg); }
+#inspector ul .drop:disabled { visibility: hidden; }
+#inspector ul .inbound .who { font-style: italic; }
+#inspector .add-link .target { flex: 1; }
