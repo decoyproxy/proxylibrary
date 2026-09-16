@@ -27,6 +27,8 @@ async function saveNode(node, changes) {
   galaxy.updateNode(node);
   refreshTypes();
   refreshDomains();
+  refreshTags();
+  galaxy.setTags(picked);
   showNode(graph, node);
   status.textContent = `Saved to ${payload.wrote}`;
   return true;
@@ -196,6 +198,60 @@ const refreshTypes = filterBar(
   (type) => `#${(galaxy.typeColors[type] ?? 0).toString(16).padStart(6, '0')}`,
   (shown) => galaxy.setTypes(shown),
 );
+// Tag chips. The other bars start fully on and narrow as you switch things off;
+// tags start off, because a library has far more of them than fit on screen and
+// "all tags" is the same as no filter anyway.
+const TAG_CHIPS = 14;
+const tagsNav = document.querySelector('#tags');
+const picked = new Set();
+
+function tagCounts() {
+  const counts = new Map();
+  for (const node of graph.nodes) {
+    for (const tag of node.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  // Most used first, then alphabetical so the row does not reshuffle on every
+  // edit that ties two counts.
+  return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
+function refreshTags() {
+  const counts = tagCounts();
+  // A picked tag stays on the bar even if it drops out of the top slice —
+  // otherwise the filter would be on with no way to switch it off.
+  const visible = counts.slice(0, TAG_CHIPS);
+  for (const entry of counts.slice(TAG_CHIPS)) {
+    if (picked.has(entry[0])) visible.push(entry);
+  }
+  for (const tag of picked) {
+    if (!counts.some(([name]) => name === tag)) picked.delete(tag);
+  }
+
+  tagsNav.replaceChildren(...visible.map(([tag, count]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.tag = tag;
+    button.setAttribute('aria-pressed', String(picked.has(tag)));
+    button.innerHTML = '<span class="name"></span><span class="count"></span>';
+    button.querySelector('.name').textContent = tag;
+    button.querySelector('.count').textContent = count;
+    return button;
+  }));
+  tagsNav.hidden = !visible.length;
+}
+
+tagsNav.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-tag]');
+  if (!button) return;
+  const tag = button.dataset.tag;
+  if (picked.has(tag)) picked.delete(tag);
+  else picked.add(tag);
+  for (const b of tagsNav.children) b.setAttribute('aria-pressed', String(picked.has(b.dataset.tag)));
+  galaxy.setTags(picked);
+});
+
+refreshTags();
+
 const refreshDomains = filterBar(
   document.querySelector('#domains'),
   (node) => node.domain,

@@ -3,6 +3,7 @@ title: Learning Transferable Visual Models (CLIP)
 importance: 3
 domain: Science
 date: 2025-11-09
+tags: machine vision, embedding
 ---
 
 # Learning Transferable Visual Models (CLIP)

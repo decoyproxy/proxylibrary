@@ -6,6 +6,9 @@
   --panel: rgba(255, 255, 255, 0.94);
 }
 * { box-sizing: border-box; }
+/* Our own display rules outrank the UA's [hidden] {display:none}, so a flex
+   container with the attribute set would still be drawn. */
+[hidden] { display: none !important; }
 body {
   margin: 0;
   background: var(--bg);
@@ -259,3 +262,31 @@ body {
 #inspector input.tags:hover { border-color: var(--line); }
 #inspector select:focus,
 #inspector input.tags:focus { outline: none; border-color: var(--fg); }
+
+#tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  pointer-events: auto;
+  flex-basis: 100%;
+  max-width: 640px;
+}
+#tags button {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 2px 9px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--dim);
+  cursor: pointer;
+  font: inherit;
+}
+#tags button:hover { color: var(--fg); }
+#tags button .count { font-size: 11px; font-variant-numeric: tabular-nums; }
+#tags button[aria-pressed='true'] {
+  border-style: solid;
+  border-color: var(--fg);
+  color: var(--fg);
+}

@@ -74,6 +74,34 @@ EDGES = [
     ("CON_LATENT", "PRJ_DECOY", "ASSEMBLE"),
 ]
 
+# A few tags, so a fresh clone has something for the tag filter to show.
+TAGS = {
+    "PRJ_UMWELT": ["umwelt", "fieldwork"],
+    "PRJ_DECOY": ["darkroom", "print"],
+    "CON_NONHUMAN": ["umwelt", "perception"],
+    "CON_UEXKULL": ["umwelt", "perception"],
+    "CON_MATERIALITY": ["darkroom", "print", "materiality"],
+    "CON_MACHINE_VISION": ["machine vision", "perception"],
+    "CON_INDEXICALITY": ["materiality"],
+    "CON_LATENT": ["machine vision", "embedding"],
+    "SRC_2026_001": ["umwelt", "perception"],
+    "SRC_UEXKULL_BOOK": ["umwelt", "perception"],
+    "SRC_FLUSSER": ["materiality", "print"],
+    "SRC_PAGLEN": ["machine vision"],
+    "SRC_CLIP": ["machine vision", "embedding"],
+    "SRC_PHOTOBOOK_A": ["print"],
+    "FRG_TICK": ["umwelt", "perception"],
+    "FRG_CAMERA_EYE": ["perception", "materiality"],
+    "FRG_AI_CHAT_01": ["machine vision", "embedding"],
+    "FRG_STUDIO_01": ["darkroom", "materiality"],
+    "FRG_WALK_01": ["fieldwork", "night"],
+    "AST_RAW_0431": ["fieldwork", "night"],
+    "AST_RAW_0522": ["print"],
+    "AST_SCRIPT_EMB": ["embedding"],
+    "AST_VIDEO_01": ["umwelt", "fieldwork"],
+    "AST_PRINT_01": ["darkroom", "print"],
+}
+
 # Semantic view stand-in: topical cluster centers.
 CLUSTER = {
     "umwelt": (70, 20, -30),
@@ -120,9 +148,10 @@ def write_library(root):
         folder = root / f"{ntype}s"
         folder.mkdir(parents=True, exist_ok=True)
         body = "\n".join(f"- [[{t}]]" for t in links.get(nid, [])) or "(no links yet)"
+        tags = ", ".join(TAGS.get(nid, []))
         (folder / f"{nid}.md").write_text(
-            f"---\ntitle: {title}\nimportance: {imp}\ndomain: {domain}\ndate: {date}\n---\n\n"
-            f"# {title}\n\n{body}\n",
+            f"---\ntitle: {title}\nimportance: {imp}\ndomain: {domain}\ndate: {date}\n"
+            f"tags: {tags}\n---\n\n# {title}\n\n{body}\n",
             encoding="utf-8",
         )
         written += 1

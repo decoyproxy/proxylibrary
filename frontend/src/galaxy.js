@@ -270,13 +270,14 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
-  // Three independent filters decide what is drawn — type, domain and the
+  // Four independent filters decide what is drawn — type, domain, tags and the
   // timeline — so none may write mesh.visible directly or the last one to run
   // would undo the others.
   function applyVisibility() {
     for (const mesh of byId.values()) {
       const visible = mesh.userData.typeOn !== false &&
         mesh.userData.domainOn !== false &&
+        mesh.userData.tagOn !== false &&
         mesh.userData.timeOn !== false;
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
@@ -289,6 +290,16 @@ export function createGalaxy(canvas, graph, onSelect) {
   function setTypes(types) {
     for (const mesh of byId.values()) {
       mesh.userData.typeOn = types.has(mesh.userData.node.type);
+    }
+    applyVisibility();
+  }
+
+  // Tag filter. Unlike the others this one starts off: an empty selection means
+  // no constraint, and picking tags narrows to the nodes carrying any of them.
+  function setTags(tags) {
+    for (const mesh of byId.values()) {
+      mesh.userData.tagOn =
+        tags.size === 0 || (mesh.userData.node.tags ?? []).some((tag) => tags.has(tag));
     }
     applyVisibility();
   }
@@ -411,7 +422,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   requestAnimationFrame(frame);
 
   return {
-    setView, focus, highlight, setTypes, setDomains, setCutoff, updateNode,
+    setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
     typeColors: TYPE_COLOR,
   };
 }
