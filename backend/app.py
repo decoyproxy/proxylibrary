@@ -13,10 +13,12 @@ from pydantic import BaseModel, Field, field_validator
 
 import ingest
 import store
+from routes_validator import router as validator_router
 
 QUERY_PREFIX = os.environ.get("QUERY_PREFIX", "query: ")
 
 app = FastAPI(title="proxylibrary")
+app.include_router(validator_router)
 app.add_middleware(
     CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"]
 )
