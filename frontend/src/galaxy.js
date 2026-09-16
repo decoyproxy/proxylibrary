@@ -4,6 +4,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { createCameraFocus } from './camera_focus.js';
 
 // Saturated on white, not neon on black: these have to hold up as ink.
 const TYPE_COLOR = {
@@ -46,6 +47,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.enablePan = false;
+  const cameraFocus = createCameraFocus(camera, controls);
 
   scene.add(new THREE.AmbientLight(0xffffff, 2.2));
   const key = new THREE.PointLight(0xffffff, 1.2, 0, 0);
@@ -228,6 +230,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   let currentView = 'semantic';
 
   function setView(view) {
+    cameraFocus.cancel();
     currentView = view;
     from = new Map([...byId].map(([id, mesh]) => [id, mesh.position.clone()]));
     to = new Map(
@@ -646,10 +649,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   function focus(id) {
     const mesh = byId.get(id);
     if (!mesh) return;
-    const offset = camera.position.clone().sub(controls.target);
-    controls.target.copy(mesh.position);
-    camera.position.copy(mesh.position).add(offset);
-    controls.update();
+    cameraFocus.start(() => mesh.position);
   }
 
   let emptyDoubleClick = () => {};
@@ -696,6 +696,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     }
     for (const mesh of billboards) mesh.quaternion.copy(camera.quaternion);
     if (++labelFrame % 5 === 0) placeLabels();
+    cameraFocus.update(now);
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);

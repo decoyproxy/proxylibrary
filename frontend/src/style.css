@@ -349,7 +349,18 @@ body {
   gap: 6px;
   padding: 2px 0;
 }
-#inspector ul .who { flex: 1; color: var(--dim); }
+#inspector ul .who {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+#inspector ul .who:hover:not(:disabled) { color: var(--fg); }
+#inspector ul .who:disabled { cursor: default; }
 #inspector ul .relation {
   width: auto;
   flex: none;

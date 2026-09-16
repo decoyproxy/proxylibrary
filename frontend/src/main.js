@@ -219,7 +219,7 @@ function linkEditor(node) {
     const other = graph.nodes.find((n) => n.id === otherId);
     const row = document.createElement('li');
     row.innerHTML =
-      '<select class="relation"></select><span class="who"></span><button type="button" class="drop">×</button>';
+      '<select class="relation"></select><button type="button" class="who"></button><button type="button" class="drop">×</button>';
     const relation = row.querySelector('.relation');
     for (const name of RELATIONS) {
       const option = document.createElement('option');
@@ -227,7 +227,13 @@ function linkEditor(node) {
       option.selected = name === edge.type;
       relation.append(option);
     }
-    row.querySelector('.who').textContent = other ? other.title : otherId;
+    const who = row.querySelector('.who');
+    who.textContent = other ? other.title : otherId;
+    who.disabled = !other;
+    who.addEventListener('click', () => {
+      galaxy.focus(otherId);
+      showNode(graph, other);
+    });
 
     // Only the note that contains the link can change it; the other end is
     // shown for context and marked as belonging elsewhere.
