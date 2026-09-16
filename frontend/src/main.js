@@ -1,4 +1,5 @@
 import { createGalaxy } from './galaxy.js';
+import { createSelection, isNodeSet } from './selection.js';
 
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
@@ -648,10 +649,20 @@ for (const name of DOMAINS) {
   bulkBar.querySelector('.domain').append(option);
 }
 
-galaxy.onSelectionChange((nodes) => {
-  chosenNodes = nodes;
-  bulkBar.hidden = nodes.length < 2; // one node is the inspector's job
-  bulkBar.querySelector('.count').textContent = `${nodes.length} selected`;
+const selection = createSelection(galaxy);
+
+selection.onChange((ids) => {
+  chosenNodes = ids.map((id) => graph.nodes.find((node) => node.id === id)).filter(Boolean);
+  bulkBar.hidden = ids.length < 2; // one node is the inspector's job
+  bulkBar.querySelector('.count').textContent = `${ids.length} selected`;
+});
+
+bulkBar.querySelector('.keep').addEventListener('click', () => {
+  const name = prompt(`Name this set of ${selection.count()} nodes`)?.trim();
+  if (!name) return;
+  const view = document.querySelector('#views button.active').dataset.view;
+  savePresets({ ...loadPresets(), [name]: selection.asPreset(view) });
+  selectPreset(name);
 });
 
 async function bulk(url, method, body, describe) {
@@ -829,6 +840,12 @@ function currentState() {
 
 function applyState(state) {
   if (state.view) document.querySelector(`[data-view="${state.view}"]`)?.click();
+  if (isNodeSet(state)) {
+    const kept = selection.apply(state, new Set(graph.nodes.map((node) => node.id)));
+    status.textContent = `${kept.size} of ${state.nodes.length} nodes still here`;
+    return;
+  }
+  selection.clear(); // a filter view is not limited to a set of nodes
   if (state.types) typeBar.select(state.types);
   if (state.domains) domainBar.select(state.domains);
   if (state.relations) relationBar.select(state.relations);

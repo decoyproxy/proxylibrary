@@ -530,6 +530,7 @@ export function createGalaxy(canvas, graph, onSelect) {
         mesh.userData.domainOn !== false &&
         mesh.userData.tagOn !== false &&
         mesh.userData.searchOn !== false &&
+        mesh.userData.setOn !== false &&
         mesh.userData.timeOn !== false;
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
@@ -555,6 +556,12 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   // Tag filter. Unlike the others this one starts off: an empty selection means
   // no constraint, and picking tags narrows to the nodes carrying any of them.
+  // Show only these node ids (a saved selection), or everything when null.
+  function setOnly(ids) {
+    for (const [id, mesh] of byId) mesh.userData.setOn = ids === null || ids.has(id);
+    applyVisibility();
+  }
+
   function setTags(tags) {
     for (const mesh of byId.values()) {
       mesh.userData.tagOn =
@@ -698,7 +705,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   requestAnimationFrame(frame);
 
   return {
-    setView, focus, highlight, setTypes, setDomains, setTags, setCutoff, updateNode,
+    setView, focus, highlight, setTypes, setDomains, setTags, setOnly, setCutoff, updateNode,
     setEdges, addNode, removeNode, onEmptyDoubleClick, setRelations,
     visibleGraph, capture, selection, clearSelection,
     onSelectionChange: (handler) => { onSelectionChange = handler; },
