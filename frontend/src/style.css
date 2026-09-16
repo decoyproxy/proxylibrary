@@ -472,3 +472,64 @@ body {
   cursor: pointer;
 }
 #export button:hover { color: var(--fg); border-color: var(--fg); }
+
+#trash {
+  position: fixed;
+  right: 16px;
+  top: 16px;
+  z-index: 3;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+#trash header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+#trash h2 { margin: 0; font-size: 14px; }
+#trash .close {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+#trash ul { margin: 0; padding: 0 16px; list-style: none; overflow-y: auto; }
+#trash li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+#trash li:first-child { border-top: 0; }
+#trash .what { flex: 1; display: grid; gap: 2px; }
+#trash small { color: var(--dim); font-size: 11px; }
+#trash .empty-note { color: var(--dim); }
+#trash .restore,
+#trash .empty {
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+#trash .restore:hover { border-color: var(--fg); }
+#trash .empty:hover { border-color: #be185d; color: #be185d; }
+#trash footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px 14px;
+}
+#trash .hint { margin: 0; color: var(--dim); font-size: 11px; }

@@ -14,6 +14,7 @@
       <nav id="export">
         <button type="button" id="export-json" title="Download the nodes and edges you can currently see">Export JSON</button>
         <button type="button" id="capture-png" title="Save the galaxy as it looks right now">Capture</button>
+        <button type="button" id="open-trash" title="Deleted nodes, still on disk">Trash</button>
       </nav>
       <nav id="views">
         <button data-view="semantic" class="active">Semantic</button>
@@ -48,6 +49,14 @@
         <button type="submit">Create</button>
       </div>
     </form>
+    <section id="trash" hidden aria-label="Trash">
+      <header><h2>Trash</h2><button type="button" class="close" aria-label="Close">×</button></header>
+      <ul></ul>
+      <footer>
+        <p class="hint">Files live in backend/data/.trash until you empty it.</p>
+        <button type="button" class="empty">Empty trash</button>
+      </footer>
+    </section>
     <datalist id="all-tags"></datalist>
     <datalist id="all-nodes"></datalist>
     <p id="status">loading…</p>

@@ -164,6 +164,7 @@ async function deleteNode(node) {
   refreshTagList();
   refreshNodeList();
   status.textContent = `Moved to ${payload.trashed.join(', ')}`;
+  if (!trashPanel.hidden) openTrash();
 }
 
 function linkEditor(node) {
@@ -594,6 +595,71 @@ document.querySelector('#capture-png').addEventListener('click', async () => {
   const blob = await galaxy.capture(2);
   download(blob, `proxylibrary-${stamp()}.png`);
   status.textContent = `Captured ${Math.round(blob.size / 1024)} KB`;
+});
+
+// Trash. Deleting moved files aside rather than erasing them, which is only
+// worth anything if there is a way back.
+const trashPanel = document.querySelector('#trash');
+
+function renderTrash(entries) {
+  const list = trashPanel.querySelector('ul');
+  if (!entries.length) {
+    list.innerHTML = '<li class="empty-note">Nothing deleted.</li>';
+    return;
+  }
+  list.replaceChildren(...entries.map((entry) => {
+    const row = document.createElement('li');
+    row.innerHTML =
+      '<span class="what"><b></b><small></small></span><button type="button" class="restore">Restore</button>';
+    row.querySelector('b').textContent = entry.id;
+    row.querySelector('small').textContent = `${entry.deleted} · ${entry.files.join(', ')}`;
+    row.querySelector('.restore').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = 'Restoring…';
+      const res = await fetch(`/api/v1/trash/restore/${encodeURIComponent(entry.batch)}`,
+        { method: 'POST' });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        status.textContent = `Restore failed (${res.status}): ${String(payload.detail ?? '').slice(0, 140)}`;
+        button.disabled = false;
+        button.textContent = 'Restore';
+        return;
+      }
+      const back = payload.nodes.find((node) => node.id === entry.id);
+      graph.nodes = payload.nodes;
+      graph.edges = payload.edges;
+      if (back) galaxy.addNode(back);
+      galaxy.setEdges(graph.edges);
+      typeBar.refresh();
+      domainBar.refresh();
+      relationBar.refresh();
+      refreshTags();
+      refreshTagList();
+      refreshNodeList();
+      renderTrash(payload.entries);
+      status.textContent = `Restored ${payload.restored.join(', ')}`;
+    });
+    return row;
+  }));
+}
+
+async function openTrash() {
+  trashPanel.hidden = false;
+  const res = await fetch('/api/v1/trash');
+  renderTrash(res.ok ? (await res.json()).entries : []);
+}
+
+document.querySelector('#open-trash').addEventListener('click', openTrash);
+trashPanel.querySelector('.close').addEventListener('click', () => {
+  trashPanel.hidden = true;
+});
+trashPanel.querySelector('.empty').addEventListener('click', async () => {
+  if (!confirm('Empty the trash?\n\nThis is the one action here that really deletes files.')) return;
+  const res = await fetch('/api/v1/trash', { method: 'DELETE' });
+  const payload = await res.json().catch(() => ({}));
+  renderTrash(payload.entries ?? []);
+  status.textContent = `Erased ${payload.erased ?? 0} file(s)`;
 });
 
 // Saved views. A research angle — "Art plus SPARK edges" — is a combination of

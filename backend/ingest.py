@@ -264,6 +264,66 @@ def trash(path):
     return moved
 
 
+def deleted_at(batch_name):
+    """20260916-215952 -> 2026-09-16 21:59, or the raw name if it is not one."""
+    try:
+        return datetime.strptime(batch_name, "%Y%m%d-%H%M%S").strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return batch_name
+
+
+def trashed():
+    """What is in the trash: one entry per deleted node, newest first.
+
+    A node's files sit under <stamp>/<the path they had in the library>, so the
+    id is the stem of the first non-sidecar file in each batch.
+    """
+    entries = []
+    for batch in sorted(TRASH.iterdir() if TRASH.is_dir() else [], reverse=True):
+        if not batch.is_dir():
+            continue
+        files = sorted(path for path in batch.rglob("*") if path.is_file())
+        originals = [path for path in files
+                     if not (path.suffix == SIDECAR and path.with_suffix("").exists())]
+        if not originals:
+            continue
+        entries.append({
+            "id": originals[0].stem,
+            "batch": batch.name,
+            "deleted": deleted_at(batch.name),
+            "files": [str(path.relative_to(batch)) for path in files],
+        })
+    return entries
+
+
+def restore(batch_name):
+    """Move a trashed batch back where it came from. Returns the restored paths."""
+    import shutil
+
+    batch = TRASH / batch_name
+    if ".." in batch_name or not batch.is_dir():
+        raise FileNotFoundError(batch_name)
+    restored = []
+    for path in sorted(p for p in batch.rglob("*") if p.is_file()):
+        destination = LIBRARY / path.relative_to(batch)
+        if destination.exists():
+            raise FileExistsError(destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(destination))
+        restored.append(destination)
+    shutil.rmtree(batch, ignore_errors=True)
+    return restored
+
+
+def empty_trash():
+    """Delete the trash for real. The only place in this codebase that does."""
+    import shutil
+
+    count = len([path for path in TRASH.rglob("*") if path.is_file()]) if TRASH.is_dir() else 0
+    shutil.rmtree(TRASH, ignore_errors=True)
+    return count
+
+
 def write_meta(path, updates):
     """Update front matter in place, keeping the body and any keys we don't know."""
     target = meta_path(path)

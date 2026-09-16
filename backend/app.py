@@ -220,6 +220,38 @@ def create_node(new: NewNode):
     return graph
 
 
+@app.get("/api/v1/trash")
+def list_trash():
+    return {"entries": ingest.trashed()}
+
+
+@app.post("/api/v1/trash/restore/{batch}")
+def restore_trash(batch: str):
+    """Put a deleted node's files back and re-ingest it into the graph."""
+    try:
+        restored = ingest.restore(batch)
+    except FileNotFoundError:
+        raise HTTPException(404, f"no such batch in the trash: {batch}") from None
+    except FileExistsError as clash:
+        raise HTTPException(409, f"{clash} is back in the library already") from None
+    ingest.main()
+    graph = store.load()
+    global _collection
+    _collection = None
+    return {
+        "restored": [str(path.relative_to(ingest.LIBRARY)) for path in restored],
+        "nodes": graph["nodes"],
+        "edges": graph["edges"],
+        "entries": ingest.trashed(),
+    }
+
+
+@app.delete("/api/v1/trash")
+def clear_trash():
+    """Erase the trash. This one really does delete."""
+    return {"erased": ingest.empty_trash(), "entries": ingest.trashed()}
+
+
 @app.delete("/api/v1/nodes/{node_id}")
 def delete_node(node_id: str):
     """Move the node's files to the trash and rebuild the graph without it.
