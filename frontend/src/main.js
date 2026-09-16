@@ -22,7 +22,7 @@ function showNode(graph, node) {
       <dt>domain</dt><dd class="v-domain"></dd>
       <dt>importance</dt><dd class="v-importance"></dd>
       <dt>date</dt><dd class="v-date"></dd>
-      <dt>file</dt><dd class="v-path"></dd>
+      <dt>file</dt><dd><button type="button" class="open" title="Open in the macOS default app"></button></dd>
     </dl>
     <ul></ul>`;
   if (node.media === 'image') {
@@ -33,9 +33,25 @@ function showNode(graph, node) {
     inspector.querySelector('h2').after(img);
   }
   inspector.querySelector('h2').textContent = node.title;
-  for (const key of ['type', 'domain', 'importance', 'date', 'path']) {
+  for (const key of ['type', 'domain', 'importance', 'date']) {
     inspector.querySelector(`.v-${key}`).textContent = node[key] ?? '—';
   }
+
+  // Hands the file to macOS, which knows what opens a .ARW better than a
+  // browser does. The server takes the node id, never a path.
+  const open = inspector.querySelector('.open');
+  open.textContent = node.path ?? '—';
+  open.disabled = !node.path;
+  open.addEventListener('click', async () => {
+    open.textContent = 'opening…';
+    const res = await fetch(`/api/v1/open/${encodeURIComponent(node.id)}`, { method: 'POST' });
+    const body = await res.text();
+    let detail = body;
+    try {
+      detail = JSON.parse(body).detail ?? body;
+    } catch {}
+    open.textContent = res.ok ? node.path : `failed: ${String(detail).slice(0, 60)}`;
+  });
   const list = inspector.querySelector('ul');
   for (const text of links) {
     const li = document.createElement('li');

@@ -159,3 +159,19 @@ body {
   }
   #status { display: none; }
 }
+
+#inspector .open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line);
+  cursor: pointer;
+  word-break: break-all;
+}
+#inspector .open:hover:not(:disabled) { text-decoration-color: var(--fg); }
+#inspector .open:disabled { color: var(--dim); text-decoration: none; cursor: default; }
