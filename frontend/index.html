@@ -15,6 +15,10 @@
         <button data-view="ontological">Ontological</button>
         <button data-view="temporal">Temporal</button>
       </nav>
+      <form id="search" autocomplete="off">
+        <input name="q" placeholder="검색 — 뜻으로 찾는다" aria-label="검색" />
+      </form>
+      <ul id="results" hidden></ul>
     </header>
     <aside id="inspector" hidden></aside>
     <p id="status">loading…</p>

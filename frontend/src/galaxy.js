@@ -47,6 +47,7 @@ export function createGalaxy(canvas, graph, onSelect) {
         emissive: TYPE_COLOR[node.type] ?? 0xffffff,
         emissiveIntensity: 0.5,
         roughness: 0.4,
+        transparent: true,
       }),
     );
     const size = 1.6 + node.importance * 1.3;
@@ -140,6 +141,28 @@ export function createGalaxy(canvas, graph, onSelect) {
     onSelect(selected?.userData.node ?? null);
   });
 
+  // Search highlight: dim everything that did not match. null clears it.
+  function highlight(ids) {
+    for (const [id, mesh] of byId) {
+      const dim = ids !== null && !ids.has(id);
+      mesh.material.opacity = dim ? 0.08 : 1;
+      const label = mesh.children[0];
+      if (label) label.element.style.opacity = dim ? 0.15 : 1;
+    }
+  }
+
+  // Re-centre the orbit on one node, keeping both the angle and the distance.
+  // Diving closer just buries the camera inside the cloud, where unrelated
+  // nodes fill the screen.
+  function focus(id) {
+    const mesh = byId.get(id);
+    if (!mesh) return;
+    const offset = camera.position.clone().sub(controls.target);
+    controls.target.copy(mesh.position);
+    camera.position.copy(mesh.position).add(offset);
+    controls.update();
+  }
+
   function resize() {
     const { clientWidth: w, clientHeight: h } = document.documentElement;
     camera.aspect = w / h;
@@ -164,5 +187,5 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
   requestAnimationFrame(frame);
 
-  return { setView, typeColors: TYPE_COLOR };
+  return { setView, focus, highlight, typeColors: TYPE_COLOR };
 }

@@ -59,3 +59,53 @@ document.querySelector('#views').addEventListener('click', (event) => {
   for (const b of document.querySelectorAll('#views button')) b.classList.toggle('active', b === button);
   galaxy.setView(button.dataset.view);
 });
+
+const results = document.querySelector('#results');
+
+function clearSearch() {
+  results.hidden = true;
+  results.replaceChildren();
+  galaxy.highlight(null);
+}
+
+document.querySelector('#search').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const query = new FormData(event.target).get('q').trim();
+  if (!query) return clearSearch();
+
+  status.textContent = `"${query}" 검색 중… (첫 검색은 모델을 올리느라 몇 초 걸린다)`;
+  const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`);
+  if (!res.ok) {
+    status.textContent = `search failed: ${(await res.json()).detail ?? res.status}`;
+    return;
+  }
+  const found = (await res.json()).results;
+  if (!found.length) {
+    status.textContent = `"${query}" — 결과 없음`;
+    return clearSearch();
+  }
+
+  galaxy.highlight(new Set(found.map((r) => r.id)));
+  galaxy.focus(found[0].id);
+  showNode(graph, graph.nodes.find((n) => n.id === found[0].id));
+  results.replaceChildren(...found.map((r) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="title"></span><span class="score"></span>';
+    li.querySelector('.title').textContent = r.title;
+    li.querySelector('.score').textContent = r.score.toFixed(2);
+    li.addEventListener('click', () => {
+      galaxy.focus(r.id);
+      showNode(graph, graph.nodes.find((n) => n.id === r.id));
+    });
+    return li;
+  }));
+  results.hidden = false;
+  status.textContent = `"${query}" — ${found.length}개 (Esc로 해제)`;
+});
+
+addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  document.querySelector('#search input').value = '';
+  clearSearch();
+  status.textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges`;
+});

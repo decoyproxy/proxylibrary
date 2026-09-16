@@ -97,25 +97,38 @@ def collect():
     return found
 
 
-def embed(texts):
-    """Local embeddings on Apple Silicon. Falls back to CPU where MPS is absent."""
-    import torch
-    from sentence_transformers import SentenceTransformer
+_model = None
 
-    device = "mps" if torch.backends.mps.is_available() else "cpu"
-    model = SentenceTransformer(MODEL, device=device)
-    return model.encode(
-        [PREFIX + t for t in texts], normalize_embeddings=True, batch_size=8
+
+def model():
+    """Load the embedding model once. The API server reuses it across requests."""
+    global _model
+    if _model is None:
+        import torch
+        from sentence_transformers import SentenceTransformer
+
+        device = "mps" if torch.backends.mps.is_available() else "cpu"
+        _model = SentenceTransformer(MODEL, device=device)
+    return _model
+
+
+def embed(texts, prefix=PREFIX):
+    """Local embeddings on Apple Silicon. Falls back to CPU where MPS is absent."""
+    return model().encode(
+        [prefix + t for t in texts], normalize_embeddings=True, batch_size=8
     ).tolist()
+
+
+def collection():
+    """The embedded ChromaDB collection written by the last ingest."""
+    import chromadb
+
+    return chromadb.PersistentClient(path=str(CHROMA)).get_or_create_collection("library")
 
 
 def store_vectors(nodes, texts, vectors):
     """Persist to embedded ChromaDB so search can query it without re-embedding."""
-    import chromadb
-
-    client = chromadb.PersistentClient(path=str(CHROMA))
-    collection = client.get_or_create_collection("library")
-    collection.upsert(
+    collection().upsert(
         ids=[n["id"] for n in nodes],
         embeddings=vectors,
         documents=texts,

@@ -58,3 +58,35 @@ body {
   text-shadow: 0 0 6px #000;
   white-space: nowrap;
 }
+
+#search { pointer-events: auto; }
+#search input {
+  width: min(280px, 50vw);
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+#search input::placeholder { color: var(--dim); }
+#search input:focus { outline: none; border-color: var(--fg); }
+#results {
+  pointer-events: auto;
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 360px;
+}
+#results li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 12px;
+  border-left: 1px solid var(--line);
+  color: var(--dim);
+  cursor: pointer;
+}
+#results li:hover { color: var(--fg); border-left-color: var(--fg); }
+#results .score { font-variant-numeric: tabular-nums; }
