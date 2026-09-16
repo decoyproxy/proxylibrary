@@ -316,3 +316,20 @@ body {
 #inspector input.date:hover { border-color: var(--line); }
 #inspector input.title:focus,
 #inspector input.date:focus { outline: none; border-color: var(--fg); }
+
+#inspector .tag-editor { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+#inspector .chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+#inspector .chip:hover { border-color: var(--fg); color: var(--dim); }
+#inspector input.tags { width: auto; flex: 1; min-width: 80px; }

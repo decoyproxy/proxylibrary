@@ -28,6 +28,7 @@ async function saveNode(node, changes) {
   refreshTypes();
   refreshDomains();
   refreshTags();
+  refreshTagList();
   galaxy.setTags(picked);
   showNode(graph, node);
   status.textContent = `Saved to ${payload.wrote}`;
@@ -74,17 +75,37 @@ function buildEditor(node) {
   }
   domain.addEventListener('change', () => saveNode(node, { domain: domain.value }));
 
-  // Tags may legitimately be cleared to nothing, so they do not go through
-  // `editable`, which treats an empty field as a slip.
+  // Tags are chips plus a one-tag field. A comma-separated string could not use
+  // the browser's completion list, which matches the whole value — and the
+  // whole point of suggesting existing tags is to stop "darkroom" and
+  // "dark room" from both existing.
+  const chips = inspector.querySelector('.chips');
+  const current = node.tags ?? [];
+  chips.replaceChildren(...current.map((tag) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.title = `Remove ${tag}`;
+    chip.innerHTML = '<span></span>×';
+    chip.querySelector('span').textContent = tag;
+    chip.addEventListener('click', () =>
+      saveNode(node, { tags: current.filter((other) => other !== tag) }));
+    return chip;
+  }));
+
   const tags = inspector.querySelector('.tags');
-  const original = (node.tags ?? []).join(', ');
-  tags.value = original;
-  const commit = () => {
-    if (tags.value.trim() === original.trim()) return;
-    saveNode(node, { tags: tags.value.split(',') });
+  const add = () => {
+    const tag = tags.value.trim();
+    tags.value = '';
+    if (!tag || current.includes(tag)) return;
+    saveNode(node, { tags: [...current, tag] });
   };
-  tags.addEventListener('keydown', (event) => event.key === 'Enter' && tags.blur());
-  tags.addEventListener('blur', commit);
+  tags.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    add();
+  });
+  tags.addEventListener('blur', add);
 }
 
 function showNode(graph, node) {
@@ -107,7 +128,10 @@ function showNode(graph, node) {
       <dt>file</dt><dd><button type="button" class="open" title="Open in the macOS default app"></button></dd>
       <dt>importance</dt><dd class="stars" role="group" aria-label="Importance"></dd>
       <dt>domain</dt><dd><select class="domain"></select></dd>
-      <dt>tags</dt><dd><input class="tags" placeholder="comma, separated" aria-label="Tags" /></dd>
+      <dt>tags</dt><dd class="tag-editor">
+        <span class="chips"></span>
+        <input class="tags" list="all-tags" placeholder="add tag" aria-label="Add a tag" />
+      </dd>
     </dl>
     <ul></ul>`;
   if (node.media === 'image') {
@@ -232,6 +256,15 @@ function tagCounts() {
   return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+function refreshTagList() {
+  const list = document.querySelector('#all-tags');
+  list.replaceChildren(...tagCounts().map(([tag]) => {
+    const option = document.createElement('option');
+    option.value = tag;
+    return option;
+  }));
+}
+
 function refreshTags() {
   const counts = tagCounts();
   // A picked tag stays on the bar even if it drops out of the top slice —
@@ -268,6 +301,7 @@ tagsNav.addEventListener('click', (event) => {
 });
 
 refreshTags();
+refreshTagList();
 
 const refreshDomains = filterBar(
   document.querySelector('#domains'),
