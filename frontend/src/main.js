@@ -1,5 +1,6 @@
 import { createGalaxy } from './galaxy.js';
 import { createSelection, isNodeSet } from './selection.js';
+import { createPresetManager } from './preset_manager.js';
 
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
@@ -811,27 +812,9 @@ trashPanel.querySelector('.empty').addEventListener('click', async () => {
 
 // Saved views. A research angle — "Art plus SPARK edges" — is a combination of
 // every filter at once, and retyping it is the kind of thing you stop doing.
-// They live in this browser: the library is local, and a preset is a way of
-// looking at it rather than part of it.
-const PRESETS_KEY = 'proxylibrary.presets';
-const presetsNav = document.querySelector('#presets');
-
-function loadPresets() {
-  try {
-    return JSON.parse(localStorage.getItem(PRESETS_KEY)) ?? {};
-  } catch {
-    return {}; // unreadable storage is not a reason to lose the galaxy
-  }
-}
-
-function savePresets(presets) {
-  try {
-    localStorage.setItem(PRESETS_KEY, JSON.stringify(presets));
-  } catch (error) {
-    status.textContent = `Could not save the view: ${error.message}`;
-  }
-}
-
+// Reading the current one and putting one back stays here, because both reach
+// into every control on the HUD; keeping and listing them does not, and lives
+// in preset_manager.js.
 function currentState() {
   return {
     view: document.querySelector('#views button.active').dataset.view,
@@ -871,61 +854,14 @@ function applyState(state) {
   }
 }
 
-function renderPresets() {
-  const presets = loadPresets();
-  const current = new URLSearchParams(location.search).get('preset');
-  presetsNav.replaceChildren(...Object.keys(presets).sort().map((name) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.preset = name;
-    button.setAttribute('aria-pressed', String(name === current));
-    button.innerHTML = '<span class="name"></span><span class="forget">×</span>';
-    button.querySelector('.name').textContent = name;
-    return button;
-  }));
-
-  const save = document.createElement('button');
-  save.type = 'button';
-  save.className = 'save-preset';
-  save.textContent = '+ Save view';
-  save.addEventListener('click', () => {
-    const name = prompt('Name this view')?.trim();
-    if (!name) return;
-    savePresets({ ...loadPresets(), [name]: currentState() });
-    selectPreset(name);
-  });
-  presetsNav.append(save);
-}
-
-function selectPreset(name) {
-  const preset = loadPresets()[name];
-  if (!preset) return;
-  applyState(preset);
-  const url = new URL(location.href);
-  url.searchParams.set('preset', name);
-  history.replaceState(null, '', url);
-  renderPresets();
-  status.textContent = `View "${name}"`;
-}
-
-presetsNav.addEventListener('click', (event) => {
-  const forget = event.target.closest('.forget');
-  const button = event.target.closest('button[data-preset]');
-  if (!button) return;
-  const name = button.dataset.preset;
-  if (forget) {
-    const presets = loadPresets();
-    delete presets[name];
-    savePresets(presets);
-    if (new URLSearchParams(location.search).get('preset') === name) {
-      const url = new URL(location.href);
-      url.searchParams.delete('preset');
-      history.replaceState(null, '', url);
-    }
-    renderPresets();
-    return;
-  }
-  selectPreset(name);
+// The panel that lists these views — and the `?preset=` link that names one —
+// is preset_manager.js. It keeps them wherever its store answers: the server
+// route if there is one, this browser otherwise.
+const presets = createPresetManager({
+  nav: document.querySelector('#presets'),
+  getState: currentState,
+  applyState,
+  onStatus: (message) => { status.textContent = message; },
 });
 
 // Timeline. Only the temporal view has an axis where "before this month" means
@@ -1002,9 +938,7 @@ function setTimelineVisible(on) {
   }
 }
 
-renderPresets();
-const wanted = new URLSearchParams(location.search).get('preset');
-if (wanted) selectPreset(wanted);
+presets.start();
 
 document.querySelector('#views').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-view]');
