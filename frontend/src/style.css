@@ -175,3 +175,54 @@ body {
 }
 #inspector .open:hover:not(:disabled) { text-decoration-color: var(--fg); }
 #inspector .open:disabled { color: var(--dim); text-decoration: none; cursor: default; }
+
+#timeline {
+  pointer-events: auto;
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100vw - 32px));
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  backdrop-filter: blur(6px);
+}
+#timeline button {
+  flex: none;
+  min-width: 46px;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+#timeline button:hover { border-color: var(--fg); }
+#timeline output {
+  flex: none;
+  min-width: 96px;
+  text-align: right;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+#scrub {
+  flex: 1;
+  accent-color: var(--fg);
+  cursor: pointer;
+}
+/* Narrow: the timeline joins the HUD's flow under the filters rather than
+   floating over them, and the bottom is left to the inspector sheet. */
+@media (max-width: 720px) {
+  #timeline {
+    position: static;
+    transform: none;
+    width: 100%;
+    flex-basis: 100%;
+  }
+}

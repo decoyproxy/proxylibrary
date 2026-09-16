@@ -110,11 +110,82 @@ types.addEventListener('click', (event) => {
   galaxy.setTypes(shown);
 });
 
+// Timeline. Only the temporal view has an axis where "before this month" means
+// anything, so the scrubber appears with it and releases the graph when you
+// leave.
+const timeline = document.querySelector('#timeline');
+const scrub = document.querySelector('#scrub');
+const when = document.querySelector('#when');
+const play = document.querySelector('#play');
+const STEP_MS = 420;
+
+// Every month between the first and the last collected, gaps included — a
+// slider that skips empty months would run at a different speed per library.
+function monthsBetween(dates) {
+  const stamps = dates.filter(Boolean).map((d) => d.slice(0, 7)).sort();
+  if (!stamps.length) return [];
+  const [startYear, startMonth] = stamps[0].split('-').map(Number);
+  const [endYear, endMonth] = stamps[stamps.length - 1].split('-').map(Number);
+  const months = [];
+  for (let m = startYear * 12 + startMonth - 1; m <= endYear * 12 + endMonth - 1; m++) {
+    months.push(`${Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}`);
+  }
+  return months;
+}
+
+const months = monthsBetween(graph.nodes.map((n) => n.date));
+scrub.min = 0;
+scrub.max = Math.max(months.length - 1, 0);
+scrub.value = scrub.max;
+let playing = null;
+
+function showMonth(index) {
+  const month = months[index];
+  if (!month) return;
+  galaxy.setCutoff(month);
+  const count = graph.nodes.filter((n) => (n.date ?? '').slice(0, 7) <= month).length;
+  when.textContent = `${month} · ${count}`;
+}
+
+function stopPlaying() {
+  clearInterval(playing);
+  playing = null;
+  play.textContent = 'Play';
+}
+
+scrub.addEventListener('input', () => {
+  stopPlaying();
+  showMonth(Number(scrub.value));
+});
+
+play.addEventListener('click', () => {
+  if (playing) return stopPlaying();
+  if (Number(scrub.value) >= Number(scrub.max)) scrub.value = 0;
+  showMonth(Number(scrub.value));
+  play.textContent = 'Pause';
+  playing = setInterval(() => {
+    if (Number(scrub.value) >= Number(scrub.max)) return stopPlaying();
+    scrub.value = Number(scrub.value) + 1;
+    showMonth(Number(scrub.value));
+  }, STEP_MS);
+});
+
+function setTimelineVisible(on) {
+  timeline.hidden = !on || !months.length;
+  if (on) {
+    showMonth(Number(scrub.value));
+  } else {
+    stopPlaying();
+    galaxy.setCutoff(null);
+  }
+}
+
 document.querySelector('#views').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-view]');
   if (!button) return;
   for (const b of document.querySelectorAll('#views button')) b.classList.toggle('active', b === button);
   galaxy.setView(button.dataset.view);
+  setTimelineVisible(button.dataset.view === 'temporal');
 });
 
 const results = document.querySelector('#results');

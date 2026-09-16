@@ -13,6 +13,7 @@ const TYPE_COLOR = {
 const EDGE_COLOR = { SPARK: 0xbe185d, RESEARCH: 0x0f766e, ASSEMBLE: 0xb45309 };
 const PAPER = 0xffffff;
 const TRANSITION_MS = 900;
+const GROW_MS = 320; // a node scaling up as it enters the timeline
 
 // Shared across every node mesh; per-node size comes from mesh.scale.
 const SPHERE = new THREE.SphereGeometry(1, 16, 12);
@@ -82,6 +83,7 @@ export function createGalaxy(canvas, graph, onSelect) {
         material.needsUpdate = true;
         const { width, height } = texture.image;
         mesh.scale.set(size * THUMB_SCALE * (width / height), size * THUMB_SCALE, 1);
+        mesh.userData.restScale = mesh.scale.clone();
       },
       undefined,
       () => {
@@ -100,13 +102,18 @@ export function createGalaxy(canvas, graph, onSelect) {
     const mesh = isImage ? thumbnail(node, size) : dot(node);
     if (isImage) mesh.scale.set(size * THUMB_SCALE, size * THUMB_SCALE, 1);
     else mesh.scale.setScalar(size);
+    mesh.userData.restScale = mesh.scale.clone();
     mesh.userData.node = node;
     if (node.importance >= 4) {
       const el = document.createElement('div');
       el.className = 'label';
       el.textContent = node.title;
       const label = new CSS2DObject(el);
-      label.position.y = size + 3;
+      // The label is a child of a mesh scaled by `size`, so a local offset is
+      // multiplied by it — a plain `size + 3` put the label size-times too far
+      // above its node. Divide it back out to sit 3 units clear of the surface.
+      const scale = isImage ? size * THUMB_SCALE : size;
+      label.position.y = (size + 3) / scale;
       mesh.add(label);
       mesh.userData.label = label; // not children[0] — thumbnails add a frame first
     }
@@ -217,11 +224,37 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
-  // Type filter. `types` is a Set of the node types to show.
-  function setTypes(types) {
-    for (const mesh of byId.values()) mesh.visible = types.has(mesh.userData.node.type);
+  // Two independent filters decide what is drawn — the type toggles and the
+  // timeline — so neither may write mesh.visible directly or the last one to
+  // run would undo the other.
+  function applyVisibility() {
+    for (const mesh of byId.values()) {
+      const visible = mesh.userData.typeOn !== false && mesh.userData.timeOn !== false;
+      if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
+      mesh.visible = visible;
+    }
     updateEdges();
     placeLabels();
+  }
+
+  // Type filter. `types` is a Set of the node types to show.
+  function setTypes(types) {
+    for (const mesh of byId.values()) {
+      mesh.userData.typeOn = types.has(mesh.userData.node.type);
+    }
+    applyVisibility();
+  }
+
+  // Timeline: show only what had been collected by `month` (YYYY-MM, or null
+  // for all of it). Nodes appear as the scrubber moves forward, so the galaxy
+  // assembles itself in the order the library actually grew.
+  function setCutoff(month) {
+    for (const mesh of byId.values()) {
+      // Dates are YYYY-MM-DD and the cutoff is YYYY-MM: compared whole, any day
+      // in the cutoff month would sort after it and vanish.
+      mesh.userData.timeOn = month === null || (mesh.userData.node.date ?? '').slice(0, 7) <= month;
+    }
+    applyVisibility();
   }
 
   // Labels overlap badly in a dense galaxy, and a label nobody can read is
@@ -303,6 +336,15 @@ export function createGalaxy(canvas, graph, onSelect) {
       for (const [id, mesh] of byId) mesh.position.lerpVectors(from.get(id), to.get(id), k);
       updateEdges();
     }
+    for (const mesh of byId.values()) {
+      const since = now - (mesh.userData.grownAt ?? -Infinity);
+      if (since >= 0 && since <= GROW_MS) {
+        mesh.scale.copy(mesh.userData.restScale).multiplyScalar(easeInOut(since / GROW_MS));
+      } else if (mesh.userData.grownAt && since > GROW_MS) {
+        mesh.scale.copy(mesh.userData.restScale);
+        mesh.userData.grownAt = null;
+      }
+    }
     for (const mesh of billboards) mesh.quaternion.copy(camera.quaternion);
     if (++labelFrame % 5 === 0) placeLabels();
     controls.update();
@@ -312,5 +354,5 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
   requestAnimationFrame(frame);
 
-  return { setView, focus, highlight, setTypes, typeColors: TYPE_COLOR };
+  return { setView, focus, highlight, setTypes, setCutoff, typeColors: TYPE_COLOR };
 }
