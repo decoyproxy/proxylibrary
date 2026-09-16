@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
+// Saturated on white, not neon on black: these have to hold up as ink.
 const TYPE_COLOR = {
-  Project: 0xffd25e,
-  Concept: 0x6ee7ff,
-  Source: 0xa78bfa,
-  Fragment: 0xf472b6,
-  Asset: 0x7dd88f,
+  Project: 0xb45309,
+  Concept: 0x0f766e,
+  Source: 0x4338ca,
+  Fragment: 0xbe185d,
+  Asset: 0x15803d,
 };
-const EDGE_COLOR = { SPARK: 0xf472b6, RESEARCH: 0x6ee7ff, ASSEMBLE: 0xffd25e };
+const EDGE_COLOR = { SPARK: 0xbe185d, RESEARCH: 0x0f766e, ASSEMBLE: 0xb45309 };
+const PAPER = 0xffffff;
 const TRANSITION_MS = 900;
 
 // Shared across every node mesh; per-node size comes from mesh.scale.
@@ -20,7 +22,8 @@ const THUMB_SCALE = 3.4; // a thumbnail reads at roughly 3.4x the radius of a do
 
 export function createGalaxy(canvas, graph, onSelect) {
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05060a, 0.001); // density re-tuned per view in frameAll
+  scene.background = new THREE.Color(PAPER);
+  scene.fog = new THREE.FogExp2(PAPER, 0.001); // density re-tuned per view in frameAll
 
   const camera = new THREE.PerspectiveCamera(55, 1, 1, 4000);
   camera.position.set(180, 120, 240);
@@ -36,8 +39,8 @@ export function createGalaxy(canvas, graph, onSelect) {
   controls.enableDamping = true;
   controls.enablePan = false;
 
-  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
-  const key = new THREE.PointLight(0xffffff, 1.6, 0, 0);
+  scene.add(new THREE.AmbientLight(0xffffff, 2.2));
+  const key = new THREE.PointLight(0xffffff, 1.2, 0, 0);
   key.position.set(200, 300, 200);
   scene.add(key);
 
@@ -50,8 +53,8 @@ export function createGalaxy(canvas, graph, onSelect) {
       new THREE.MeshStandardMaterial({
         color: TYPE_COLOR[node.type] ?? 0xffffff,
         emissive: TYPE_COLOR[node.type] ?? 0xffffff,
-        emissiveIntensity: 0.5,
-        roughness: 0.4,
+        emissiveIntensity: 0,
+        roughness: 0.45,
         transparent: true,
       }),
     );
@@ -65,7 +68,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     // A dark photograph on a dark background has no edge; this card gives it one.
     const card = new THREE.Mesh(
       PLANE,
-      new THREE.MeshBasicMaterial({ color: 0x3a3a4c, transparent: true }),
+      new THREE.MeshBasicMaterial({ color: 0xc9c9c9, transparent: true }),
     );
     card.scale.set(1.06, 1.06, 1);
     card.position.z = -0.01;
@@ -86,7 +89,7 @@ export function createGalaxy(canvas, graph, onSelect) {
         material.color.set(TYPE_COLOR[node.type] ?? 0xffffff);
       },
     );
-    material.color.setScalar(0.72);
+    material.color.setScalar(0.9);
     billboards.push(mesh);
     return mesh;
   }
@@ -110,6 +113,7 @@ export function createGalaxy(canvas, graph, onSelect) {
     scene.add(mesh);
     byId.set(node.id, mesh);
   }
+  const labelled = [...byId.values()].filter((mesh) => mesh.userData.label);
 
   const edges = graph.edges.filter((e) => byId.has(e.source) && byId.has(e.target));
   const positions = new Float32Array(edges.length * 6);
@@ -124,7 +128,7 @@ export function createGalaxy(canvas, graph, onSelect) {
   scene.add(
     new THREE.LineSegments(
       edgeGeom,
-      new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35 }),
+      new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.28 }),
     ),
   );
 
@@ -167,8 +171,13 @@ export function createGalaxy(canvas, graph, onSelect) {
 
   function updateEdges() {
     edges.forEach((edge, i) => {
-      byId.get(edge.source).position.toArray(positions, i * 6);
-      byId.get(edge.target).position.toArray(positions, i * 6 + 3);
+      const from = byId.get(edge.source);
+      const to = byId.get(edge.target);
+      // A filtered-out endpoint collapses the segment to a point: no geometry
+      // rebuild, and nothing left to draw.
+      const hidden = !from.visible || !to.visible;
+      from.position.toArray(positions, i * 6);
+      (hidden ? from : to).position.toArray(positions, i * 6 + 3);
     });
     edgeGeom.attributes.position.needsUpdate = true;
     edgeGeom.computeBoundingSphere();
@@ -177,8 +186,8 @@ export function createGalaxy(canvas, graph, onSelect) {
   // Lit dots brighten; thumbnails, which are unlit, get a white tint instead.
   function setSelected(mesh, on) {
     if (!mesh) return;
-    if ('emissiveIntensity' in mesh.material) mesh.material.emissiveIntensity = on ? 1.6 : 0.5;
-    else mesh.material.color.setScalar(on ? 1 : 0.72);
+    if ('emissiveIntensity' in mesh.material) mesh.material.emissiveIntensity = on ? 0.9 : 0;
+    else mesh.material.color.setScalar(on ? 1 : 0.9);
   }
 
   const raycaster = new THREE.Raycaster();
@@ -202,9 +211,66 @@ export function createGalaxy(canvas, graph, onSelect) {
   function highlight(ids) {
     for (const [id, mesh] of byId) {
       const dim = ids !== null && !ids.has(id);
-      mesh.material.opacity = dim ? 0.08 : 1;
-      const label = mesh.userData.label;
-      if (label) label.element.style.opacity = dim ? 0.15 : 1;
+      mesh.material.opacity = dim ? 0.12 : 1;
+      mesh.userData.dimmed = dim;
+    }
+    placeLabels();
+  }
+
+  // Type filter. `types` is a Set of the node types to show.
+  function setTypes(types) {
+    for (const mesh of byId.values()) mesh.visible = types.has(mesh.userData.node.type);
+    updateEdges();
+    placeLabels();
+  }
+
+  // Labels overlap badly in a dense galaxy, and a label nobody can read is
+  // worse than none. Nearer and more important labels claim their screen box
+  // first; whatever collides with an already-placed one steps aside.
+  const LABEL_FADE = 2.2; // hide a label beyond this multiple of the orbit radius
+  let labelFrame = 0;
+
+  function placeLabels() {
+    const taken = [];
+    const width = renderer.domElement.clientWidth;
+    const height = renderer.domElement.clientHeight;
+    const reach = camera.position.distanceTo(controls.target) * LABEL_FADE;
+    const ranked = labelled
+      .map((mesh) => ({ mesh, distance: camera.position.distanceTo(mesh.position) }))
+      .sort((a, b) =>
+        b.mesh.userData.node.importance - a.mesh.userData.node.importance ||
+        a.distance - b.distance);
+
+    for (const { mesh, distance } of ranked) {
+      const element = mesh.userData.label.element;
+      const faded = mesh.userData.dimmed ? 0.18 : 1 - Math.min(distance / reach, 1) * 0.75;
+      if (!mesh.visible || distance > reach) {
+        element.style.visibility = 'hidden';
+        continue;
+      }
+      const point = mesh.position.clone().project(camera);
+      const x = (point.x * 0.5 + 0.5) * width;
+      const y = (-point.y * 0.5 + 0.5) * height;
+      // Measured once the element has actually been laid out — before that
+      // offsetWidth is 0, and caching that zero would shrink every box to
+      // nothing and defeat the collision test. The text never changes, so one
+      // good measurement is enough; reading it every frame would force a layout.
+      if (!mesh.userData.size?.w) {
+        const measured = { w: element.offsetWidth, h: element.offsetHeight };
+        if (measured.w) mesh.userData.size = measured;
+      }
+      const { w, h } = mesh.userData.size ?? { w: 90, h: 14 };
+      const box = { left: x - w / 2, right: x + w / 2, top: y - h, bottom: y };
+      const clash = taken.some((other) =>
+        box.left < other.right && box.right > other.left &&
+        box.top < other.bottom && box.bottom > other.top);
+      if (clash || point.z > 1) {
+        element.style.visibility = 'hidden';
+        continue;
+      }
+      taken.push(box);
+      element.style.visibility = 'visible';
+      element.style.opacity = faded;
     }
   }
 
@@ -238,6 +304,7 @@ export function createGalaxy(canvas, graph, onSelect) {
       updateEdges();
     }
     for (const mesh of billboards) mesh.quaternion.copy(camera.quaternion);
+    if (++labelFrame % 5 === 0) placeLabels();
     controls.update();
     renderer.render(scene, camera);
     labelRenderer.render(scene, camera);
@@ -245,5 +312,5 @@ export function createGalaxy(canvas, graph, onSelect) {
   }
   requestAnimationFrame(frame);
 
-  return { setView, focus, highlight, typeColors: TYPE_COLOR };
+  return { setView, focus, highlight, setTypes, typeColors: TYPE_COLOR };
 }

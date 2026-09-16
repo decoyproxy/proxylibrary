@@ -60,6 +60,40 @@ const galaxy = createGalaxy(
 galaxy.setView('semantic');
 status.textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges · drag to orbit, click a node`;
 
+// Type filter. Buttons are built from the types actually present, so a library
+// without images never shows an Asset toggle.
+const TYPE_ORDER = ['Project', 'Concept', 'Source', 'Fragment', 'Asset'];
+const present = TYPE_ORDER.filter((type) => graph.nodes.some((n) => n.type === type));
+const shown = new Set(present);
+const types = document.querySelector('#types');
+
+for (const type of present) {
+  const count = graph.nodes.filter((n) => n.type === type).length;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.type = type;
+  button.setAttribute('aria-pressed', 'true');
+  button.style.setProperty('--swatch', `#${galaxy.typeColors[type].toString(16).padStart(6, '0')}`);
+  button.innerHTML = '<span class="swatch"></span><span class="name"></span><span class="count"></span>';
+  button.querySelector('.swatch').style.background = button.style.getPropertyValue('--swatch');
+  button.querySelector('.name').textContent = type;
+  button.querySelector('.count').textContent = count;
+  types.append(button);
+}
+
+types.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-type]');
+  if (!button) return;
+  const type = button.dataset.type;
+  // Turning the last one off would leave an empty screen; treat that click as
+  // "show only this one" instead.
+  if (shown.has(type) && shown.size === 1) present.forEach((t) => shown.add(t));
+  else if (shown.has(type)) shown.delete(type);
+  else shown.add(type);
+  for (const b of types.children) b.setAttribute('aria-pressed', String(shown.has(b.dataset.type)));
+  galaxy.setTypes(shown);
+});
+
 document.querySelector('#views').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-view]');
   if (!button) return;
@@ -80,7 +114,7 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
   const query = new FormData(event.target).get('q').trim();
   if (!query) return clearSearch();
 
-  status.textContent = `"${query}" 검색 중… (첫 검색은 모델을 올리느라 몇 초 걸린다)`;
+  status.textContent = `Searching "${query}"… (the first search loads the model, a few seconds)`;
   const res = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}&limit=8`);
   if (!res.ok) {
     // A 500 answers with plain text, so res.json() would throw and leave the
@@ -90,13 +124,13 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
     try {
       detail = JSON.parse(body).detail ?? body;
     } catch {}
-    status.textContent = `검색 실패 (${res.status}): ${detail.slice(0, 120)}`;
+    status.textContent = `Search failed (${res.status}): ${detail.slice(0, 120)}`;
     clearSearch();
     return;
   }
   const { results: found, images = [] } = await res.json();
   if (!found.length) {
-    status.textContent = `"${query}" — 결과 없음`;
+    status.textContent = `"${query}" — no results`;
     return clearSearch();
   }
 
@@ -118,12 +152,12 @@ document.querySelector('#search').addEventListener('submit', async (event) => {
   if (images.length) {
     const heading = document.createElement('li');
     heading.className = 'heading';
-    heading.textContent = '이미지 (CLIP — 위 점수와 다른 척도)';
+    heading.textContent = 'Images (CLIP — a different scale from the scores above)';
     rows.push(heading, ...images.map(row));
   }
   results.replaceChildren(...rows);
   results.hidden = false;
-  status.textContent = `"${query}" — ${found.length}개 (Esc로 해제)`;
+  status.textContent = `"${query}" — ${found.length} results (Esc to clear)`;
 });
 
 addEventListener('keydown', (event) => {

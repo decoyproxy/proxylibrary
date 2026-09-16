@@ -63,8 +63,11 @@ CLIP_MIX = float(os.environ.get("CLIP_MIX", 0.4))  # CLIP's share of the joint s
 # everything else stays put.
 REFIT_RATIO = float(os.environ.get("REFIT_RATIO", 0.2))
 CLIP_TEXT_CHARS = 300  # CLIP's text encoder truncates at 77 tokens anyway
-CLIP_MODEL = os.environ.get("CLIP_MODEL", "ViT-B-32")
-CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion2b_s34b_b79k")
+# Multilingual CLIP: the English-only ViT-B-32 ranked night frames first for
+# "숲 사진". This one costs ~1.7GB and a slower encode, and reads the Korean
+# notes the library is actually written in.
+CLIP_MODEL = os.environ.get("CLIP_MODEL", "xlm-roberta-base-ViT-B-32")
+CLIP_WEIGHTS = os.environ.get("CLIP_WEIGHTS", "laion5b_s13b_b90k")
 TYPES = ("Project", "Concept", "Source", "Fragment", "Asset")
 EDGE_BY_TARGET = {"Project": "ASSEMBLE", "Concept": "RESEARCH"}
 
@@ -187,16 +190,20 @@ def collection():
     )
 
 
-def metadata(node, fingerprints):
+def metadata(node, fingerprints, model):
     fields = ("title", "type", "domain", "importance", "path", "media")
-    return {**{k: node[k] for k in fields}, "fingerprint": fingerprints[node["id"]]}
+    return {**{k: node[k] for k in fields},
+            "fingerprint": fingerprints[node["id"]], "model": model}
 
 
-def reusable(store, ids, fingerprints):
+def reusable(store, ids, fingerprints, model):
     """Vectors from the last ingest whose file has not been touched since.
 
     The fingerprint rides along in the vector's own metadata, so there is no
-    second cache file to fall out of step with the index.
+    second cache file to fall out of step with the index. The model name rides
+    along too: swapping EMBED_MODEL or CLIP_MODEL invalidates every vector
+    without changing a single file, and silently mixing two embedding spaces
+    would scramble the galaxy with no visible error.
     """
     if not ids:
         return {}
@@ -207,7 +214,7 @@ def reusable(store, ids, fingerprints):
     return {
         nid: list(vector)
         for nid, meta, vector in zip(stored["ids"], stored["metadatas"], embeddings)
-        if meta.get("fingerprint") == fingerprints.get(nid)
+        if meta.get("fingerprint") == fingerprints.get(nid) and meta.get("model") == model
     }
 
 
@@ -379,8 +386,8 @@ def build(found, refit=False):
     fingerprints = {n["id"]: n.pop("fingerprint") for n in nodes}
 
     library, clips = collection(), clip_collection()
-    text_cache = reusable(library, ids, fingerprints)
-    clip_cache = reusable(clips, ids, fingerprints)
+    text_cache = reusable(library, ids, fingerprints, MODEL)
+    clip_cache = reusable(clips, ids, fingerprints, CLIP_MODEL)
     stale = {n["id"] for n in nodes if n["id"] not in text_cache or n["id"] not in clip_cache}
     picked = [(n, t) for n, t in zip(nodes, texts) if n["id"] in stale]
     if picked:
@@ -396,12 +403,12 @@ def build(found, refit=False):
             ids=[n["id"] for n, _ in picked],
             embeddings=[text_vectors[n["id"]] for n, _ in picked],
             documents=[t for _, t in picked],
-            metadatas=[metadata(n, fingerprints) for n, _ in picked],
+            metadatas=[metadata(n, fingerprints, MODEL) for n, _ in picked],
         )
         clips.upsert(
             ids=[n["id"] for n, _ in picked],
             embeddings=[clip_by_id[n["id"]] for n, _ in picked],
-            metadatas=[metadata(n, fingerprints) for n, _ in picked],
+            metadatas=[metadata(n, fingerprints, CLIP_MODEL) for n, _ in picked],
         )
     for store in (library, clips):
         for gone in drop_deleted(store, set(ids)):
