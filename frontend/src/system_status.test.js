@@ -1,13 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createSystemStatus, describe as read, reasons, STATUS_URL } from './system_status.js';
+import {
+  createSystemStatus,
+  describe as read,
+  reasons,
+  STATUS_URL,
+  whenText,
+} from './system_status.js';
 
 // What backend/routes_health.py answers when all is well.
 const HEALTHY = {
   status: 'ok',
   node_count: 1024,
   edge_count: 3210,
+  umap_updated_at: '2026-09-17T08:59:00',
   geometry_3d_nodes: 1024,
   chromadb: { healthy: true, synced: true, text_vectors: 1024, clip_vectors: 1024 },
   hybrid_search: { index_warmed: true, memory_loaded: true },
@@ -26,8 +33,10 @@ function fakeElement(tag = 'span') {
     hidden: false,
     setAttribute(name, value) { this.attributes[name] = value; },
     getAttribute(name) { return this.attributes[name]; },
+    tabIndex: -1,
     replaceChildren(...nodes) { this.children = nodes; },
     find(className) { return this.children.find((child) => child.className === className); },
+    tip() { return this.find('tip').children.map((line) => line.textContent); },
   };
 }
 
@@ -40,17 +49,27 @@ function once(payload, ok = true) {
   return async () => ({ ok, json: async () => payload });
 }
 
-test('a healthy backend reads as ok, with the library counts', () => {
+test('a healthy backend reads as ok, and the counts move into the tooltip', () => {
   assert.deepEqual(read(HEALTHY), {
     state: 'ok',
-    label: '1,024 nodes · 3,210 edges',
-    detail: 'Everything is answering',
+    summary: 'Everything is answering',
+    lines: ['Everything is answering', '1,024 nodes · 3,210 edges', 'projected 2026-09-17 08:59'],
   });
+});
+
+test('a projection time nobody can read is left out rather than shown broken', () => {
+  assert.equal(whenText('2026-09-17T08:59:00'), '2026-09-17 08:59');
+  assert.equal(whenText(null), null);
+  assert.equal(whenText('not a date'), null);
+  assert.deepEqual(read({ ...HEALTHY, umap_updated_at: null }).lines, [
+    'Everything is answering',
+    '1,024 nodes · 3,210 edges',
+  ]);
 });
 
 test('no answer at all is its own state, not a health reading', () => {
   assert.equal(read(null).state, 'down');
-  assert.equal(read(null).label, 'backend unreachable');
+  assert.deepEqual(read(null).lines, ['No answer from the backend']);
 });
 
 test('degraded says what is wrong, not only that something is', () => {
@@ -59,17 +78,15 @@ test('degraded says what is wrong, not only that something is', () => {
     status: 'degraded',
     chromadb: { healthy: true, synced: false, text_vectors: 900, clip_vectors: 1024 },
   };
-  assert.deepEqual(read(stale), {
-    state: 'degraded',
-    label: '1,024 nodes · 3,210 edges',
-    detail: 'index out of step (900 vectors for 1,024 nodes)',
-  });
+  assert.equal(read(stale).state, 'degraded');
+  assert.equal(read(stale).lines[0], 'index out of step (900 vectors for 1,024 nodes)');
+  assert.equal(read(stale).lines[1], '1,024 nodes · 3,210 edges');
 
   const cold = { ...HEALTHY, status: 'degraded', chromadb: { healthy: false, synced: false } };
-  assert.match(read(cold).detail, /vector store not answering/);
+  assert.match(read(cold).summary, /vector store not answering/);
 
   const flat = { ...HEALTHY, status: 'degraded', geometry_3d_nodes: 1000 };
-  assert.match(read(flat).detail, /24 nodes without 3D coordinates/);
+  assert.match(read(flat).summary, /24 nodes without 3D coordinates/);
 });
 
 test('the errors the route reports are kept, and come first', () => {
@@ -78,10 +95,10 @@ test('the errors the route reports are kept, and come first', () => {
 });
 
 test('a degraded payload that explains nothing still says something', () => {
-  assert.equal(read({ status: 'degraded', node_count: 1, edge_count: 0 }).detail, 'Something is off');
+  assert.equal(read({ status: 'degraded', node_count: 1, edge_count: 0 }).summary, 'Something is off');
 });
 
-test('the badge draws the dot, the count and the reason', async () => {
+test('the badge is a dot at rest and a tooltip when asked', async () => {
   const host = fakeHost();
   const asked = [];
   const badge = createSystemStatus({
@@ -97,10 +114,16 @@ test('the badge draws the dot, the count and the reason', async () => {
   assert.deepEqual(asked, [STATUS_URL]);
   assert.equal(host.hidden, false);
   assert.equal(host.dataset.state, 'ok');
-  assert.equal(host.find('what').textContent, '1,024 nodes · 3,210 edges');
-  assert.equal(host.title, 'Everything is answering');
-  assert.match(host.getAttribute('aria-label'), /^Backend: ok\./);
+  assert.deepEqual(host.children.map((child) => child.className), ['dot', 'tip']);
+  assert.equal(host.title, '', 'no native title: the tooltip is the element');
+  assert.deepEqual(host.tip(), [
+    'Everything is answering',
+    '1,024 nodes · 3,210 edges',
+    'projected 2026-09-17 08:59',
+  ]);
+  assert.match(host.getAttribute('aria-label'), /^Backend: ok\. Everything is answering\./);
   assert.equal(host.getAttribute('role'), 'status');
+  assert.equal(host.tabIndex, 0, 'reachable without a mouse');
 });
 
 test('a backend that stops answering shows as down, not as the last good reading', async () => {
@@ -122,7 +145,7 @@ test('a backend that stops answering shows as down, not as the last good reading
   alive = false;
   await badge.refresh();
   assert.equal(host.dataset.state, 'down');
-  assert.equal(host.find('what').textContent, 'backend unreachable');
+  assert.deepEqual(host.tip(), ['No answer from the backend']);
 });
 
 test('a 500 is an answer about nothing, so it reads as down too', async () => {

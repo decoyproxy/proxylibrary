@@ -11,8 +11,15 @@
  * count, and — when something is wrong — what. It never interrupts; the galaxy
  * keeps working while the badge says the index is out of step.
  *
- * `degraded` covers several different faults, so the badge carries the reason
- * in its tooltip rather than only a colour. "Something is wrong" that does not
+ * The badge is a dot and nothing else. The HUD already prints the counts of
+ * what is on screen, and a second row of numbers beside them reads as noise
+ * until the moment it disagrees — which is the moment nobody is looking. So
+ * the numbers move into the tooltip: at rest the dot is a colour, on hover or
+ * focus it is the library's live counts, when the projection was last rebuilt,
+ * and what is wrong if anything is.
+ *
+ * `degraded` covers several different faults, so the tooltip names the one it
+ * found rather than only colouring the dot. "Something is wrong" that does not
  * say what is a light people learn to ignore.
  */
 
@@ -21,24 +28,48 @@ export const POLL_MS = 5000; // the route caches for 5s; asking faster buys noth
 
 const NUMBER = new Intl.NumberFormat();
 
+/** When the projection was last rebuilt, in the reader's own clock. */
+export function whenText(iso) {
+  if (!iso) return null;
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return null;
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ` +
+    `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
 /**
- * What to draw for a payload. `null` means the backend could not be reached at
+ * What to say for a payload. `null` means the backend could not be reached at
  * all, which is a third state: not the library's health but the absence of an
  * answer about it.
  *
- * -> { state, label, detail } — `state` is one of ok | degraded | down.
+ * -> { state, summary, lines } — `state` is one of ok | degraded | down, and
+ * `lines` is the tooltip, most important first.
  */
 export function describe(payload) {
   if (!payload) {
-    return { state: 'down', label: 'backend unreachable', detail: 'No answer from the backend' };
+    return {
+      state: 'down',
+      summary: 'No answer from the backend',
+      lines: ['No answer from the backend'],
+    };
   }
 
   const nodes = payload.node_count ?? 0;
   const edges = payload.edge_count ?? 0;
-  const label = `${NUMBER.format(nodes)} nodes · ${NUMBER.format(edges)} edges`;
-  if (payload.status === 'ok') return { state: 'ok', label, detail: 'Everything is answering' };
+  const ok = payload.status === 'ok';
+  const summary = ok ? 'Everything is answering' : (reasons(payload).join(' · ') || 'Something is off');
+  const updated = whenText(payload.umap_updated_at);
 
-  return { state: 'degraded', label, detail: reasons(payload).join(' · ') || 'Something is off' };
+  return {
+    state: ok ? 'ok' : 'degraded',
+    summary,
+    lines: [
+      summary,
+      `${NUMBER.format(nodes)} nodes · ${NUMBER.format(edges)} edges`,
+      updated && `projected ${updated}`,
+    ].filter(Boolean),
+  };
 }
 
 /** Why a payload is degraded, in the order a reader would want them. */
@@ -83,12 +114,15 @@ export function createSystemStatus({
   dot.className = 'dot';
   dot.setAttribute('aria-hidden', 'true');
 
-  const text = document.createElement('span');
-  text.className = 'what';
+  // The tooltip is an element rather than `title` so it can hold several lines,
+  // appear on keyboard focus, and not wait out the browser's own delay.
+  const tip = document.createElement('span');
+  tip.className = 'tip';
 
   if (host) {
-    host.replaceChildren(dot, text);
+    host.replaceChildren(dot, tip);
     host.setAttribute('role', 'status');
+    host.tabIndex = 0; // reachable without a mouse: the dot alone says only a colour
     host.hidden = true;
   }
 
@@ -96,9 +130,13 @@ export function createSystemStatus({
     current = describe(payload);
     if (!host) return current;
     host.dataset.state = current.state;
-    host.title = current.detail;
-    host.setAttribute('aria-label', `Backend: ${current.state}. ${current.detail}`);
-    text.textContent = current.label;
+    host.setAttribute('aria-label', `Backend: ${current.state}. ${current.lines.join('. ')}`);
+    tip.replaceChildren(...current.lines.map((line) => {
+      const row = document.createElement('span');
+      row.className = 'line';
+      row.textContent = line;
+      return row;
+    }));
     host.hidden = false;
     return current;
   }
