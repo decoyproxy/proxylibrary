@@ -19,10 +19,14 @@
 export const PRESETS_KEY = 'proxylibrary.presets';
 export const PRESETS_ENDPOINT = '/api/v1/presets';
 
+/** The server's own ceiling on a name (routes_presets.py: Field(max_length=100)). */
+export const NAME_LIMIT = 100;
+
 /**
  * What the server will refuse (backend/routes_presets.py): a name that is
- * blank once trimmed, or one with a `/` in it. Saying so at the prompt costs
- * nothing and beats a 422 read back off the status line.
+ * blank once trimmed, one with a `/` in it, or one past the length limit.
+ * Saying so at the prompt costs nothing and beats a 422 read back off the
+ * status line. The name is measured after trimming, which is what gets sent.
  *
  * -> a sentence to show, or null when the name is fine.
  */
@@ -30,6 +34,9 @@ export function nameProblem(name) {
   const trimmed = (name ?? '').trim();
   if (!trimmed || trimmed.includes('/')) {
     return "Preset name cannot contain '/' or be blank";
+  }
+  if (trimmed.length > NAME_LIMIT) {
+    return `Preset name is ${trimmed.length} characters; the limit is ${NAME_LIMIT}`;
   }
   return null;
 }

@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   createPresetManager,
   nameProblem,
+  NAME_LIMIT,
   detectPresetStore,
   localPresetStore,
   remotePresetStore,
@@ -234,4 +235,14 @@ test('a good name is trimmed on the way to the store', async () => {
   await manager.saveCurrent();
 
   assert.deepEqual(puts, [['Umwelt set', { view: 'temporal' }]]);
+});
+
+test('a name past the server limit is caught at the prompt too', () => {
+  const longest = 'x'.repeat(NAME_LIMIT);
+  assert.equal(nameProblem(longest), null);
+  assert.equal(nameProblem(`  ${longest}  `), null); // trimming is what gets sent
+  assert.equal(
+    nameProblem('x'.repeat(NAME_LIMIT + 18)),
+    `Preset name is ${NAME_LIMIT + 18} characters; the limit is ${NAME_LIMIT}`,
+  );
 });
