@@ -159,3 +159,76 @@ test('an unreachable backend reports once and draws nothing', async () => {
   assert.deepEqual(host.children, []);
   assert.deepEqual(said, ['Could not read the text for SRC_SCAN: offline']);
 });
+
+// A slow reply for one node and a fast one for the next: the slow one must not
+// land in the card that is on screen.
+function deferred() {
+  let settle;
+  const promise = new Promise((resolve) => { settle = resolve; });
+  return { promise, settle };
+}
+
+test('a slow reply for the previous node never reaches the card on screen', async () => {
+  const host = fakeDom();
+  const slow = deferred();
+  const aborted = [];
+  const viewer = createOcrViewer({
+    fetch: async (url) => {
+      if (url.includes('SLOW')) return slow.promise;
+      return { ok: true, json: async () => SCAN };
+    },
+    AbortController: class {
+      constructor() { this.signal = { aborted: false }; }
+      abort() { this.signal.aborted = true; aborted.push(this); }
+    },
+  });
+
+  const first = viewer.attach({ id: 'SLOW' }, host);
+  const second = await viewer.attach({ id: 'SRC_SCAN' }, host);
+
+  slow.settle({ ok: true, json: async () => ({ id: 'SLOW', ocr_text: 'from the wrong node' }) });
+  assert.equal(await first, null);
+
+  assert.equal(aborted.length, 1, 'the abandoned request was aborted');
+  assert.equal(host.children.length, 1, 'one card, one holder');
+  assert.equal(host.children[0], second);
+  const shown = second.findAll('text').map((pre) => pre.textContent).join('\n');
+  assert.doesNotMatch(shown, /wrong node/);
+});
+
+test('an aborted request is not reported as a failure', async () => {
+  const host = fakeDom();
+  const said = [];
+  const viewer = createOcrViewer({
+    fetch: async () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      throw error;
+    },
+    onStatus: (message) => said.push(message),
+  });
+
+  assert.equal(await viewer.attach({ id: 'SRC_SCAN' }, host), null);
+  assert.deepEqual(said, []);
+  assert.deepEqual(host.children, []);
+});
+
+test('the request carries a signal, and cancel() stops it', async () => {
+  const host = fakeDom();
+  const signals = [];
+  let controller = null;
+  const viewer = createOcrViewer({
+    fetch: async (_url, options) => { signals.push(options?.signal); return { ok: true, json: async () => SCAN }; },
+    AbortController: class {
+      constructor() { this.signal = { aborted: false }; controller = this; }
+      abort() { this.signal.aborted = true; }
+    },
+  });
+
+  await viewer.attach({ id: 'SRC_SCAN' }, host);
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0], controller.signal);
+
+  viewer.cancel();
+  assert.equal(controller.signal.aborted, true);
+});

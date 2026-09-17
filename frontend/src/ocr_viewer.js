@@ -20,6 +20,12 @@
  *
  * Both sections start closed. The card is read at a glance — type, date, links
  * — and a wall of OCR would bury that; the text is there when it is asked for.
+ *
+ * One card is open at a time, so one request is in flight at a time: opening a
+ * node abandons the one before it. Without that, clicking through nodes faster
+ * than the server answers lets an earlier reply land in a later card — the
+ * picture of one scan above the words of another, which is worse than no words
+ * at all because nothing about it looks wrong.
  */
 
 /** Where the text for a node comes from. */
@@ -51,7 +57,19 @@ export function createOcrViewer({
   fetch: fetchImpl = fetch,
   clipboard = navigator.clipboard,
   onStatus = () => {},
+  AbortController: AbortControllerImpl = AbortController,
 } = {}) {
+  // Which card the answer belongs to. A reply for anything but the current
+  // generation is dropped even if the abort lost the race to it.
+  let generation = 0;
+  let inFlight = null;
+
+  function cancel() {
+    generation += 1;
+    inFlight?.abort();
+    inFlight = null;
+  }
+
   function panel({ label, text }) {
     const section = document.createElement('section');
     section.className = 'panel';
@@ -101,8 +119,13 @@ export function createOcrViewer({
    * with no text in it, or a backend that cannot be reached.
    */
   async function attach(node, host, before = null) {
+    cancel(); // whatever the last card asked for, nobody is waiting for it now
     const url = ocrUrl(node);
     if (!url || !host) return null;
+
+    const mine = ++generation;
+    const controller = new AbortControllerImpl();
+    inFlight = controller;
 
     const holder = document.createElement('div');
     holder.className = 'sidecar';
@@ -111,14 +134,24 @@ export function createOcrViewer({
 
     let payload = null;
     try {
-      const res = await fetchImpl(url);
+      const res = await fetchImpl(url, { signal: controller.signal });
+      if (mine !== generation) {
+        holder.remove(); // a later card is on screen; this answer is for the last one
+        return null;
+      }
       if (!res.ok) {
         holder.remove();
         return null; // 404 is the ordinary case: a node with no file of its own
       }
       payload = await res.json();
     } catch (error) {
+      holder.remove();
+      // An abandoned request is not a failure to report: we abandoned it.
+      if (mine !== generation || error.name === 'AbortError') return null;
       onStatus(`Could not read the text for ${node.id}: ${error.message}`);
+      return null;
+    }
+    if (mine !== generation) {
       holder.remove();
       return null;
     }
@@ -132,5 +165,5 @@ export function createOcrViewer({
     return holder;
   }
 
-  return { attach };
+  return { attach, cancel };
 }
