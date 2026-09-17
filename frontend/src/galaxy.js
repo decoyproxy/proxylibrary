@@ -524,9 +524,9 @@ export function createGalaxy(canvas, graph, onSelect) {
     placeLabels();
   }
 
-  // Five independent filters decide what is drawn — type, domain, tags, search
-  // and the timeline — so none may write mesh.visible directly or the last one
-  // to run would undo the others.
+  // Six independent filters decide what is drawn — type, domain, tags, search,
+  // the timeline and the year range — so none may write mesh.visible directly
+  // or the last one to run would undo the others.
   function applyVisibility() {
     for (const mesh of byId.values()) {
       const visible = mesh.userData.typeOn !== false &&
@@ -534,7 +534,8 @@ export function createGalaxy(canvas, graph, onSelect) {
         mesh.userData.tagOn !== false &&
         mesh.userData.searchOn !== false &&
         mesh.userData.setOn !== false &&
-        mesh.userData.timeOn !== false;
+        mesh.userData.timeOn !== false &&
+        mesh.userData.yearOn !== false;
       if (visible && !mesh.visible) mesh.userData.grownAt = performance.now();
       mesh.visible = visible;
     }
@@ -590,6 +591,14 @@ export function createGalaxy(canvas, graph, onSelect) {
       // in the cutoff month would sort after it and vanish.
       mesh.userData.timeOn = month === null || (mesh.userData.node.date ?? '').slice(0, 7) <= month;
     }
+    applyVisibility();
+  }
+
+  // Year range. The scrubber above owns `timeOn` and moves one edge forward;
+  // this is the two-edged version and keeps its own flag, so dragging one does
+  // not undo the other. Null means the range constrains nothing.
+  function setYears(ids) {
+    for (const [id, mesh] of byId) mesh.userData.yearOn = ids === null || ids.has(id);
     applyVisibility();
   }
 
@@ -706,7 +715,8 @@ export function createGalaxy(canvas, graph, onSelect) {
   requestAnimationFrame(frame);
 
   return {
-    setView, focus, highlight, setTypes, setDomains, setTags, setOnly, setCutoff, updateNode,
+    setView, focus, highlight, setTypes, setDomains, setTags, setOnly, setCutoff, setYears,
+    updateNode,
     setEdges, addNode, removeNode, onEmptyDoubleClick, setRelations,
     visibleGraph, capture, selection, clearSelection,
     onSelectionChange: (handler) => { onSelectionChange = handler; },

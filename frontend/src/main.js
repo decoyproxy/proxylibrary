@@ -2,6 +2,7 @@ import { createGalaxy } from './galaxy.js';
 import { createSelection, isNodeSet } from './selection.js';
 import { createPresetManager } from './preset_manager.js';
 import { createOcrViewer } from './ocr_viewer.js';
+import { createTimelineFilter } from './timeline_filter.js';
 
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
@@ -315,6 +316,7 @@ const ocrViewer = createOcrViewer({
 
 function showNode(graph, node) {
   if (!node) {
+    ocrViewer.cancel(); // nobody is waiting for the last card's text
     inspector.hidden = true;
     return;
   }
@@ -870,6 +872,15 @@ const presets = createPresetManager({
   getState: currentState,
   applyState,
   onStatus: (message) => { status.textContent = message; },
+});
+
+// Year range. A second question about time, asked in every view: the scrubber
+// below moves one edge through the months, this holds two edges over the years.
+// They are separate filters in the galaxy, so neither undoes the other.
+const years = createTimelineFilter({
+  host: document.querySelector('#years'),
+  nodes: graph.nodes,
+  onChange: () => galaxy.setYears(years.ids()),
 });
 
 // Timeline. Only the temporal view has an axis where "before this month" means
