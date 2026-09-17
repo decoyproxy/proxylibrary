@@ -1,7 +1,6 @@
 """Cheap process, graph and vector-store health checks."""
 
 import time
-from datetime import datetime, timezone
 from functools import lru_cache
 
 from fastapi import APIRouter
@@ -20,14 +19,18 @@ def has_semantic_xyz(node):
 
 
 @lru_cache(maxsize=1)
-def status_snapshot(graph_mtime_ns, cache_slot):
+def status_snapshot(_graph_mtime_ns, _cache_slot):
     started = time.perf_counter()
     errors = []
     try:
         graph = store.load()
         nodes, edges = graph["nodes"], graph["edges"]
+        updated = graph.get("umap_updated_at")
+        if not updated:
+            errors.append("graph: missing umap_updated_at")
     except Exception as error:
         nodes, edges = [], []
+        updated = None
         errors.append(f"graph: {type(error).__name__}")
     graph_load_ms = round((time.perf_counter() - started) * 1000, 3)
 
@@ -38,10 +41,6 @@ def status_snapshot(graph_mtime_ns, cache_slot):
     except Exception as error:
         errors.append(f"chromadb: {type(error).__name__}")
 
-    updated = (
-        datetime.fromtimestamp(graph_mtime_ns / 1_000_000_000, timezone.utc).isoformat()
-        if graph_mtime_ns else None
-    )
     geometry_nodes = sum(has_semantic_xyz(node) for node in nodes)
     index_warmed = text_vectors is not None and clip_vectors is not None
     vectors_synced = index_warmed and text_vectors == clip_vectors == len(nodes)

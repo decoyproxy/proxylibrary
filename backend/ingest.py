@@ -41,7 +41,7 @@ import os
 import re
 import sys
 from datetime import date as date_cls
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import coords
@@ -591,19 +591,18 @@ def embed_image_query(text):
     return vector.cpu().tolist()
 
 
-def last_layout():
-    """Semantic coordinates from the previous graph.json, to keep the galaxy stable."""
+def last_graph():
+    """Previous graph metadata and coordinates, if they are readable."""
     out = DATA / "graph.json"
     if not out.exists():
         return {}
     try:
-        graph = json.loads(out.read_text(encoding="utf-8"))
+        return json.loads(out.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return {}
-    return {n["id"]: n["coordinates"]["semantic"] for n in graph.get("nodes", [])}
 
 
-def layout(ids, joint, stale, refit):
+def layout(ids, joint, stale, refit, previous_graph=None):
     """Semantic coordinates: keep the old ones where nothing changed.
 
     A full UMAP re-projection moves every node, which throws away the reader's
@@ -611,20 +610,24 @@ def layout(ids, joint, stale, refit):
     no previous layout, or when enough of the library has changed that the old
     one no longer describes it.
     """
-    previous = last_layout()
+    previous_graph = last_graph() if previous_graph is None else previous_graph
+    previous = {
+        node["id"]: node["coordinates"]["semantic"]
+        for node in previous_graph.get("nodes", [])
+    }
     settled = [i for i in ids if i not in stale and i in previous]
     changed_share = 1 - len(settled) / len(ids)
     if refit or not settled or changed_share > REFIT_RATIO:
         why = "asked" if refit else ("no previous layout" if not settled
                                      else f"{changed_share:.0%} of the library changed")
         print(f"re-projecting the whole galaxy ({why})", flush=True)
-        return coords.semantic(joint)
+        return coords.semantic(joint), True
 
     index = {nid: i for i, nid in enumerate(ids)}
     settled = set(settled)
     moving = [i for i in ids if i not in settled]
     if not moving:
-        return [previous[i] for i in ids]
+        return [previous[i] for i in ids], False
     kept = [i for i in ids if i in settled]
     placed = coords.place(
         [joint[index[i]] for i in moving],
@@ -633,7 +636,7 @@ def layout(ids, joint, stale, refit):
     )
     print(f"placed {len(moving)} node(s); {len(settled)} kept their position", flush=True)
     spots = dict(zip(moving, placed))
-    return [spots[i] if i in spots else previous[i] for i in ids]
+    return [spots[i] if i in spots else previous[i] for i in ids], False
 
 
 def weigh_edges(edges, ids, joint):
@@ -657,9 +660,8 @@ def weigh_edges(edges, ids, joint):
 def build(found, refit=False):
     """Graph for the whole library, re-embedding only what changed.
 
-    UMAP still fits the entire corpus every time — it is a global layout, so one
-    new document moves every coordinate — but that costs seconds where embedding
-    a large library costs minutes.
+    A full UMAP fit runs only when requested or when enough nodes changed;
+    smaller changes are placed into the stable previous layout.
     """
     nodes, texts = [n for n, _ in found], [t for _, t in found]
     ids = [n["id"] for n in nodes]
@@ -697,7 +699,8 @@ def build(found, refit=False):
     joint = coords.join(
         [text_vectors[i] for i in ids], centre_clip(nodes, clip_by_id), CLIP_MIX
     )
-    semantic = layout(ids, joint, stale, refit)
+    previous_graph = last_graph()
+    semantic, reprojected = layout(ids, joint, stale, refit, previous_graph)
 
     by_id = {n["id"]: n for n in nodes}
     edges, seen = [], set()
@@ -725,7 +728,11 @@ def build(found, refit=False):
             "ontological": coords.ontological(i, node["type"], node["domain"], node["importance"]),
             "temporal": coords.temporal(node["date"], node["domain"], node["importance"], span),
         }
-    return {"nodes": nodes, "edges": edges}
+    updated = (
+        datetime.now(timezone.utc).isoformat()
+        if reprojected else previous_graph.get("umap_updated_at")
+    )
+    return {"umap_updated_at": updated, "nodes": nodes, "edges": edges}
 
 
 def reopen_store():
@@ -755,7 +762,7 @@ def main(refit=False):
         )
     graph = build(found, refit=refit)
     out = DATA / "graph.json"
-    out.write_text(json.dumps(graph, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_atomic(out, json.dumps(graph, indent=2, ensure_ascii=False))
     print(f"wrote {out} ({len(graph['nodes'])} nodes, {len(graph['edges'])} edges)", flush=True)
 
 
