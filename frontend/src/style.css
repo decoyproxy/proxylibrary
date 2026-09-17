@@ -715,3 +715,28 @@ body {
   cursor: pointer;
 }
 #years .reset:hover { color: var(--fg); border-color: var(--fg); }
+
+/* Backend health. A quiet line in the HUD until something is wrong, when the
+   dot takes a colour and the tooltip says what. */
+#system {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  color: var(--dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+#system .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
+#system[data-state='ok'] .dot { background: #15803d; }
+#system[data-state='degraded'] .dot { background: #b45309; }
+#system[data-state='degraded'] .what { color: #b45309; }
+#system[data-state='down'] .dot { background: #be185d; }
+#system[data-state='down'] .what { color: #be185d; }
+@media (prefers-reduced-motion: no-preference) {
+  #system[data-state='degraded'] .dot,
+  #system[data-state='down'] .dot { animation: pulse 1.8s ease-in-out infinite; }
+}
+@keyframes pulse { 50% { opacity: .35; } }
+@media (max-width: 720px) { #system .what { display: none; } }

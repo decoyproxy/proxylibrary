@@ -3,6 +3,7 @@ import { createSelection, isNodeSet } from './selection.js';
 import { createPresetManager } from './preset_manager.js';
 import { createOcrViewer } from './ocr_viewer.js';
 import { createTimelineFilter } from './timeline_filter.js';
+import { createSystemStatus } from './system_status.js';
 
 const status = document.querySelector('#status');
 const inspector = document.querySelector('#inspector');
@@ -386,6 +387,11 @@ const galaxy = createGalaxy(
 );
 galaxy.setView('semantic');
 status.textContent = `${graph.nodes.length} nodes · ${graph.edges.length} edges · drag to orbit, click a node`;
+
+// A light on the dashboard. The count beside it is the library's, not the
+// picture's: the galaxy goes on drawing the same dots whether or not the index
+// behind them is still in step.
+createSystemStatus({ host: document.querySelector('#system') }).start();
 
 const RELATIONS = ['SPARK', 'RESEARCH', 'ASSEMBLE'];
 
