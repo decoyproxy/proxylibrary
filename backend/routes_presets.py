@@ -39,15 +39,20 @@ def read_presets():
             raise TypeError
         return presets
     except (json.JSONDecodeError, KeyError, TypeError) as error:
-        raise HTTPException(500, f"invalid preset store: {PRESETS_FILE}") from error
+        raise HTTPException(500, "invalid preset store") from error
+    except OSError as error:
+        raise HTTPException(500, "could not read preset store") from error
 
 
 def write_presets(presets):
-    PRESETS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    ingest.write_atomic(
-        PRESETS_FILE,
-        json.dumps({"presets": presets}, ensure_ascii=False, indent=2) + "\n",
-    )
+    try:
+        PRESETS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        ingest.write_atomic(
+            PRESETS_FILE,
+            json.dumps({"presets": presets}, ensure_ascii=False, indent=2) + "\n",
+        )
+    except OSError as error:
+        raise HTTPException(500, "could not write preset store") from error
 
 
 @router.get("")

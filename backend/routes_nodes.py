@@ -28,7 +28,11 @@ def extract_text(raw):
 
 
 def node_file(node_id):
-    node = next((item for item in store.load()["nodes"] if item["id"] == node_id), None)
+    try:
+        nodes = store.load()["nodes"]
+    except Exception as error:
+        raise HTTPException(500, "node index is unavailable") from error
+    node = next((item for item in nodes if item["id"] == node_id), None)
     if not node or not node.get("path"):
         raise HTTPException(404, f"no node {node_id}")
     root = ingest.LIBRARY.resolve()
@@ -41,7 +45,10 @@ def node_file(node_id):
 @router.get("/{node_id}/ocr")
 def node_ocr(node_id: str):
     sidecar = ingest.meta_path(node_file(node_id))
-    raw = sidecar.read_text(encoding="utf-8", errors="replace") if sidecar.exists() else ""
+    try:
+        raw = sidecar.read_text(encoding="utf-8", errors="replace") if sidecar.exists() else ""
+    except OSError as error:
+        raise HTTPException(500, "node text is unavailable") from error
     ocr_text, note_text = extract_text(raw)
     return {
         "id": node_id,

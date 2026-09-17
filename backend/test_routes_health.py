@@ -35,10 +35,15 @@ class SystemStatusTests(unittest.TestCase):
             patch.object(routes_health.ingest, "collection", return_value=text),
             patch.object(routes_health.ingest, "clip_collection", return_value=clips),
         ):
-            first = self.client.get("/api/v1/system/status")
+            first = self.client.get(
+                "/api/v1/system/status", headers={"Origin": "http://localhost:5173"}
+            )
             second = self.client.get("/api/v1/system/status")
 
         self.assertEqual(first.status_code, 200)
+        self.assertEqual(
+            first.headers.get("access-control-allow-origin"), "http://localhost:5173"
+        )
         self.assertEqual(first.json()["status"], "ok")
         self.assertEqual(first.json()["node_count"], 1)
         self.assertEqual(first.json()["geometry_3d_nodes"], 1)
