@@ -19,6 +19,21 @@
 export const PRESETS_KEY = 'proxylibrary.presets';
 export const PRESETS_ENDPOINT = '/api/v1/presets';
 
+/**
+ * What the server will refuse (backend/routes_presets.py): a name that is
+ * blank once trimmed, or one with a `/` in it. Saying so at the prompt costs
+ * nothing and beats a 422 read back off the status line.
+ *
+ * -> a sentence to show, or null when the name is fine.
+ */
+export function nameProblem(name) {
+  const trimmed = (name ?? '').trim();
+  if (!trimmed || trimmed.includes('/')) {
+    return "Preset name cannot contain '/' or be blank";
+  }
+  return null;
+}
+
 /** Presets in this browser. Unreadable storage is not a reason to lose the galaxy. */
 export function localPresetStore({ storage = localStorage, key = PRESETS_KEY } = {}) {
   function read() {
@@ -169,8 +184,14 @@ export function createPresetManager({
   }
 
   async function saveCurrent() {
-    const name = ask('Name this view')?.trim();
-    if (!name) return;
+    const typed = ask('Name this view');
+    if (typed === null || typed === undefined) return; // cancelling is not an error
+    const name = typed.trim();
+    const problem = nameProblem(name);
+    if (problem) {
+      onStatus(problem);
+      return;
+    }
     try {
       await (await ready()).put(name, getState());
     } catch (error) {

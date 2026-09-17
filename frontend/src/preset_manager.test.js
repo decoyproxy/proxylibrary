@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   createPresetManager,
+  nameProblem,
   detectPresetStore,
   localPresetStore,
   remotePresetStore,
@@ -157,4 +158,80 @@ test('the remote store speaks the shape backend/routes_presets.py serves', async
     method: 'POST',
     body: JSON.stringify({ name: 'Umwelt set', state: { nodes: ['CON_UEXKULL'], view: 'semantic' } }),
   });
+});
+
+test('a name the server would refuse is caught at the prompt', () => {
+  assert.equal(nameProblem('Umwelt set'), null);
+  assert.equal(nameProblem('  padded  '), null);
+  const refusal = "Preset name cannot contain '/' or be blank";
+  assert.equal(nameProblem('folder/view'), refusal);
+  assert.equal(nameProblem('/'), refusal);
+  assert.equal(nameProblem('   '), refusal);
+  assert.equal(nameProblem(''), refusal);
+});
+
+test('saving a refused name says so and never reaches the store', async () => {
+  const browser = fakeBrowser();
+  const said = [];
+  const puts = [];
+  const manager = createPresetManager({
+    nav: browser.nav,
+    store: { kind: 'test', all: async () => ({}), put: async (...args) => puts.push(args), remove: async () => {} },
+    getState: () => ({ view: 'semantic' }),
+    applyState: () => {},
+    onStatus: (message) => said.push(message),
+    ask: () => 'folder/view',
+    location: browser.location,
+    history: browser.history,
+  });
+
+  await manager.start();
+  await manager.saveCurrent();
+
+  assert.deepEqual(said, ["Preset name cannot contain '/' or be blank"]);
+  assert.deepEqual(puts, []);
+});
+
+test('cancelling the prompt is silent, not a complaint', async () => {
+  const browser = fakeBrowser();
+  const said = [];
+  const manager = createPresetManager({
+    nav: browser.nav,
+    store: { kind: 'test', all: async () => ({}), put: async () => {}, remove: async () => {} },
+    getState: () => ({}),
+    applyState: () => {},
+    onStatus: (message) => said.push(message),
+    ask: () => null,
+    location: browser.location,
+    history: browser.history,
+  });
+
+  await manager.start();
+  await manager.saveCurrent();
+
+  assert.deepEqual(said, []);
+});
+
+test('a good name is trimmed on the way to the store', async () => {
+  const browser = fakeBrowser();
+  const puts = [];
+  const manager = createPresetManager({
+    nav: browser.nav,
+    store: {
+      kind: 'test',
+      all: async () => ({}),
+      put: async (name, state) => puts.push([name, state]),
+      remove: async () => {},
+    },
+    getState: () => ({ view: 'temporal' }),
+    applyState: () => {},
+    ask: () => '  Umwelt set  ',
+    location: browser.location,
+    history: browser.history,
+  });
+
+  await manager.start();
+  await manager.saveCurrent();
+
+  assert.deepEqual(puts, [['Umwelt set', { view: 'temporal' }]]);
 });
