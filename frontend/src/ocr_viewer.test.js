@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createOcrViewer, sections, sidecarPath, splitSidecar, stripFrontMatter } from './ocr_viewer.js';
+import { createOcrViewer, ocrUrl, sections } from './ocr_viewer.js';
 
-const SCAN = `---
-domain: Art
----
-<!-- ocr -->
-프로보크 1968: 도발하는 사진들
-Provoke: grainy, blurred, out of focus photographs
-<!-- /ocr -->
-`;
+// What backend/routes_nodes.py answers, copied from its own test.
+const SCAN = {
+  id: 'SRC_SCAN',
+  has_ocr: true,
+  ocr_text: '첫 줄\nsecond line',
+  has_note: true,
+  note_text: '앞 메모\n\n뒤 메모',
+};
+const EMPTY = { id: 'SRC_SCAN', has_ocr: false, ocr_text: '', has_note: false, note_text: '' };
 
 function fakeElement(tag = 'div') {
   return {
@@ -47,6 +48,11 @@ function fakeElement(tag = 'div') {
       }
       return null;
     },
+    findAll(className, out = []) {
+      if (this.className === className) out.push(this);
+      for (const child of this.children) child.findAll?.(className, out);
+      return out;
+    },
   };
 }
 
@@ -55,75 +61,52 @@ function fakeDom() {
   return fakeElement('aside');
 }
 
-function reply(body, ok = true) {
-  return async () => ({ ok, text: async () => body });
+function reply(payload, ok = true) {
+  return async () => ({ ok, json: async () => payload });
 }
 
-test('a sidecar sits beside its file, and a note is its own sidecar', () => {
-  assert.equal(sidecarPath({ path: 'Sources/SCAN.jpg' }), 'Sources/SCAN.jpg.md');
-  assert.equal(sidecarPath({ path: 'Sources/UMWELT.pdf' }), 'Sources/UMWELT.pdf.md');
-  assert.equal(sidecarPath({ path: 'Concepts/CON_UEXKULL.md' }), 'Concepts/CON_UEXKULL.md');
-  assert.equal(sidecarPath({ path: 'Concepts/SHOUTED.MD' }), 'Concepts/SHOUTED.MD');
-  assert.equal(sidecarPath({}), null);
+test('the text comes from the node route, by id', () => {
+  assert.equal(ocrUrl({ id: 'SRC_SCAN' }), '/api/v1/nodes/SRC_SCAN/ocr');
+  assert.equal(ocrUrl({ id: 'AST/ODD ID' }), '/api/v1/nodes/AST%2FODD%20ID/ocr');
+  assert.equal(ocrUrl({}), null);
 });
 
-test('front matter is dropped: the card already shows it', () => {
-  assert.equal(stripFrontMatter('---\ndomain: Art\n---\nbody here\n').trim(), 'body here');
-  assert.equal(stripFrontMatter('no front matter'), 'no front matter');
+test('the machine reading and the reader writing get a panel each', () => {
+  assert.deepEqual(sections(SCAN).map((s) => [s.kind, s.label]), [
+    ['ocr', 'OCR text'],
+    ['note', 'Note'],
+  ]);
+  assert.deepEqual(sections({ ...SCAN, ocr_text: '' }).map((s) => s.kind), ['note']);
+  assert.deepEqual(sections({ ...SCAN, note_text: '   ' }).map((s) => s.kind), ['ocr']);
+  assert.deepEqual(sections(EMPTY), []);
+  assert.deepEqual(sections(null), []);
 });
 
-test('the machine reading and the reader writing come apart', () => {
-  assert.deepEqual(splitSidecar(SCAN), {
-    ocr: '프로보크 1968: 도발하는 사진들\nProvoke: grainy, blurred, out of focus photographs',
-    notes: '',
-  });
-
-  const annotated = '내가 쓴 메모\n\n<!-- ocr -->\nread by machine\n<!-- /ocr -->\n\n뒤에 쓴 메모';
-  assert.deepEqual(splitSidecar(annotated), {
-    ocr: 'read by machine',
-    notes: '내가 쓴 메모\n\n뒤에 쓴 메모',
-  });
-});
-
-test('an unclosed marker keeps the notes instead of swallowing them', () => {
-  const half = 'handwritten\n\n<!-- ocr -->\nhalf written';
-  assert.deepEqual(splitSidecar(half), { ocr: '', notes: half });
-});
-
-test('an empty sidecar draws no toggle at all', () => {
-  assert.deepEqual(sections('---\ndomain: Art\n---\n'), []);
-  assert.deepEqual(sections(SCAN).map((s) => s.kind), ['ocr']);
-  assert.deepEqual(
-    sections('note\n<!-- ocr -->\nread\n<!-- /ocr -->').map((s) => s.kind),
-    ['ocr', 'note'],
-  );
-});
-
-test('attach reads the sidecar under /media and opens on the toggle', async () => {
+test('attach asks the route and opens each panel on its toggle', async () => {
   const host = fakeDom();
   const asked = [];
   const viewer = createOcrViewer({
-    fetch: async (url) => { asked.push(url); return (await reply(SCAN)()); },
+    fetch: async (url) => { asked.push(url); return reply(SCAN)(); },
   });
 
-  const holder = await viewer.attach({ path: 'Sources/SCAN.jpg' }, host);
+  const holder = await viewer.attach({ id: 'SRC_SCAN', path: 'Sources/scan.jpg' }, host);
 
-  assert.deepEqual(asked, ['/media/Sources/SCAN.jpg.md']);
-  assert.equal(host.children.length, 1);
-  const toggle = holder.find('reveal');
+  assert.deepEqual(asked, ['/api/v1/nodes/SRC_SCAN/ocr']);
+  assert.equal(holder.findAll('reveal').length, 2);
+
+  const [ocrToggle, noteToggle] = holder.findAll('reveal');
+  assert.match(ocrToggle.textContent, /^OCR text · \d+ chars$/);
+  assert.match(noteToggle.textContent, /^Note · \d+ chars$/);
+
   const body = holder.find('text');
-  const copy = holder.find('copy');
-  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   assert.equal(body.hidden, true);
-
-  toggle.click();
-  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+  ocrToggle.click();
+  assert.equal(ocrToggle.getAttribute('aria-expanded'), 'true');
   assert.equal(body.hidden, false);
-  assert.equal(copy.hidden, false);
-  assert.match(body.textContent, /프로보크/);
+  assert.equal(body.textContent, '첫 줄\nsecond line');
 });
 
-test('Copy text puts the OCR text on the clipboard', async () => {
+test('Copy text puts that panel own text on the clipboard', async () => {
   const host = fakeDom();
   const written = [];
   const viewer = createOcrViewer({
@@ -131,26 +114,36 @@ test('Copy text puts the OCR text on the clipboard', async () => {
     clipboard: { writeText: async (text) => written.push(text) },
   });
 
-  const holder = await viewer.attach({ path: 'Sources/SCAN.jpg' }, host);
-  holder.find('copy').click();
+  const holder = await viewer.attach({ id: 'SRC_SCAN' }, host);
+  const [ocrCopy, noteCopy] = holder.findAll('copy');
+  ocrCopy.click();
+  noteCopy.click();
   await new Promise((resolve) => setImmediate(resolve));
 
-  assert.equal(written.length, 1);
-  assert.match(written[0], /Provoke: grainy/);
+  assert.deepEqual(written, ['첫 줄\nsecond line', '앞 메모\n\n뒤 메모']);
 });
 
-test('a node with no sidecar on disk leaves the card as it was', async () => {
+test('a sidecar with no text in it leaves the card as it was', async () => {
   const host = fakeDom();
-  const viewer = createOcrViewer({ fetch: reply('', false) });
-  assert.equal(await viewer.attach({ path: 'Assets/RAW_0431.ARW' }, host), null);
+  const viewer = createOcrViewer({ fetch: reply(EMPTY) });
+  assert.equal(await viewer.attach({ id: 'SRC_SCAN' }, host), null);
   assert.deepEqual(host.children, []);
 });
 
-test('a node with no file is not asked about', async () => {
+test('404 — a node with no file of its own — draws nothing and says nothing', async () => {
+  const host = fakeDom();
+  const said = [];
+  const viewer = createOcrViewer({ fetch: reply(null, false), onStatus: (m) => said.push(m) });
+  assert.equal(await viewer.attach({ id: 'CON_LATENT' }, host), null);
+  assert.deepEqual(host.children, []);
+  assert.deepEqual(said, []);
+});
+
+test('a node with no id is not asked about', async () => {
   const host = fakeDom();
   let called = false;
   const viewer = createOcrViewer({ fetch: async () => { called = true; } });
-  assert.equal(await viewer.attach({ id: 'CON_LATENT' }, host), null);
+  assert.equal(await viewer.attach({ path: 'Sources/scan.jpg' }, host), null);
   assert.equal(called, false);
 });
 
@@ -162,7 +155,7 @@ test('an unreachable backend reports once and draws nothing', async () => {
     onStatus: (message) => said.push(message),
   });
 
-  assert.equal(await viewer.attach({ path: 'Sources/SCAN.jpg' }, host), null);
+  assert.equal(await viewer.attach({ id: 'SRC_SCAN' }, host), null);
   assert.deepEqual(host.children, []);
-  assert.deepEqual(said, ['Could not read Sources/SCAN.jpg.md: offline']);
+  assert.deepEqual(said, ['Could not read the text for SRC_SCAN: offline']);
 });
